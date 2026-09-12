@@ -1,0 +1,21 @@
+# Virtual environment -- large (~5GB), machine-specific, reproducible from requirements.txt
+.venv/
+.claude/
+# Datasets + derived artifacts -- large (~3GB), fully regenerable from src/ingest.py onward
+data/
+
+# Model checkpoints -- regenerable via src/train.py, large binaries
+checkpoints/
+
+# Python bytecode cache
+__pycache__/
+*.pyc
+
+# Ad-hoc local run logs (not project artifacts -- results/*.csv and results/*.png are the
+# canonical, tracked outputs)
+log.txt
+log.log
+
+# OS/editor cruft
+.DS_Store
+Thumbs.db
