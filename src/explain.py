@@ -18,6 +18,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import networkx as nx
+import numpy as np
 import torch
 
 from models.gat_lstm import TemporalGAT
@@ -50,21 +51,45 @@ def plot_attention(graph, edge_index, alpha, flow_labels: list, top_k: int = TOP
                     out_path: Path = RESULTS_DIR / "fig_attention.png") -> Path:
     """`alpha`: (E, heads) last-layer GAT attention weights for `graph`'s edges."""
     alpha = alpha.mean(dim=1).detach().cpu().numpy()  # average over heads
-    top_edges = alpha.argsort()[-top_k:]
+    src_all, dst_all = edge_index[0].numpy(), edge_index[1].numpy()
+    keep = np.where(src_all != dst_all)[0]  # GAT adds self-loops; they dominate and hide structure
+    top_edges = keep[alpha[keep].argsort()[-top_k:]]
 
+    # nodes keyed by flow index (NOT by label string: distinct flows often share port+label)
     G = nx.DiGraph()
     for i in top_edges:
-        src, dst = edge_index[0, i].item(), edge_index[1, i].item()
-        G.add_edge(flow_labels[src], flow_labels[dst], weight=float(alpha[i]))
-
-    pos = nx.spring_layout(G, seed=0)
-    weights = [G[u][v]["weight"] * 10 for u, v in G.edges()]
-    fig, ax = plt.subplots(figsize=(8, 6))
-    nx.draw(G, pos, ax=ax, with_labels=True, width=weights, node_size=800, font_size=7)
-    ax.set_title(f"Top-{top_k} attention edges -- window {graph.window_id} ({graph.day})")
+        G.add_edge(int(src_all[i]), int(dst_all[i]), weight=float(alpha[i]))
+    labels = {n: f"#{n}\nport {graph.dest_port[n]}\n{str(graph.flow_label[n])[:10]}"
+              for n in G.nodes}
+    # one grid cell per weakly-connected component so short edges are not hidden behind nodes
+    comps = sorted(nx.weakly_connected_components(G), key=len, reverse=True)
+    cols = int(np.ceil(np.sqrt(len(comps))))
+    pos = {}
+    for ci, comp in enumerate(comps):
+        cx, cy = 3.8 * (ci % cols), -2.6 * (ci // cols)
+        nodes = sorted(comp)
+        if len(nodes) <= 2:
+            for k, n in enumerate(nodes):
+                pos[n] = (cx + (k - (len(nodes) - 1) / 2) * 2.2, cy)
+        else:
+            sub = nx.circular_layout(G.subgraph(nodes), scale=0.95)
+            for n, (x, y) in sub.items():
+                pos[n] = (cx + x, cy + y)
+    w = np.array([G[u][v]["weight"] for u, v in G.edges()])
+    widths = 1.5 + 5.0 * np.clip(w, 0.0, 1.0)  # fixed 0-1 scale so panels are comparable
+    fig, ax = plt.subplots(figsize=(6.2, 5.2))
+    nx.draw_networkx_nodes(G, pos, ax=ax, node_size=1700, node_color="#9ecae1", edgecolors="k")
+    nx.draw_networkx_labels(G, pos, labels, ax=ax, font_size=10)
+    ec = nx.draw_networkx_edges(G, pos, ax=ax, width=widths, edge_color=w, edge_cmap=plt.cm.OrRd,
+                                edge_vmin=0.0, edge_vmax=1.0, arrows=True,
+                                arrowsize=22, node_size=1700, connectionstyle="arc3,rad=0.15")
+    sm = plt.cm.ScalarMappable(cmap=plt.cm.OrRd, norm=plt.Normalize(0.0, 1.0))
+    fig.colorbar(sm, ax=ax, shrink=0.75, label="attention weight")
+    ax.set_title(f"Window {graph.window_id} ({graph.day})", fontsize=12)
+    ax.axis("off")
     fig.tight_layout()
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_path, dpi=150, bbox_inches="tight")
+    fig.savefig(out_path, dpi=200, bbox_inches="tight")
     plt.close(fig)
     log.info("Wrote %s", out_path)
     return out_path

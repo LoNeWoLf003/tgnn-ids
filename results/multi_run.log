@@ -1,0 +1,100 @@
+2026-11-08 11:25:10,014 [nsl-kdd seed 0] windows: train 393 val 49 stationary 50 stream 88 (W=256, d=70)
+2026-11-08 11:25:14,490   RandomForest done (4s)
+2026-11-08 11:25:18,052   XGBoost done (4s)
+2026-11-08 11:25:32,814   MLP(sklearn) done (15s)
+2026-11-08 11:25:40,424   MLP trained+scored (4s, train 4s)
+2026-11-08 11:25:49,049   GCN trained+scored (9s, train 9s)
+2026-11-08 11:25:59,735   GAT trained+scored (11s, train 11s)
+2026-11-08 11:26:32,490   GAT+LSTM trained+scored (33s, train 33s)
+2026-11-08 11:26:34,182   GAT+LSTM[incremental]: 1 adaptation events, 2s
+2026-11-08 11:26:54,955   GAT+LSTM[full_retrain]: 1 adaptation events, 21s
+2026-11-08 11:26:54,959 [nsl-kdd seed 0] total 107s
+2026-11-08 11:26:56,678 [nsl-kdd seed 1] windows: train 393 val 49 stationary 50 stream 88 (W=256, d=70)
+2026-11-08 11:26:59,215   RandomForest done (3s)
+2026-11-08 11:27:02,053   XGBoost done (3s)
+2026-11-08 11:27:12,215   MLP(sklearn) done (10s)
+2026-11-08 11:27:18,668   MLP trained+scored (4s, train 4s)
+2026-11-08 11:27:26,268   GCN trained+scored (8s, train 8s)
+2026-11-08 11:27:35,877   GAT trained+scored (10s, train 10s)
+2026-11-08 11:28:09,665   GAT+LSTM trained+scored (34s, train 34s)
+2026-11-08 11:28:10,926   GAT+LSTM[incremental]: 1 adaptation events, 1s
+2026-11-08 11:28:32,753   GAT+LSTM[full_retrain]: 1 adaptation events, 22s
+2026-11-08 11:28:32,757 [nsl-kdd seed 1] total 98s
+2026-11-08 11:28:34,946 [nsl-kdd seed 2] windows: train 393 val 49 stationary 50 stream 88 (W=256, d=70)
+2026-11-08 11:28:38,671   RandomForest done (4s)
+2026-11-08 11:28:40,828   XGBoost done (2s)
+2026-11-08 11:28:51,090   MLP(sklearn) done (10s)
+2026-11-08 11:28:56,514   MLP trained+scored (3s, train 3s)
+2026-11-08 11:29:03,064   GCN trained+scored (7s, train 6s)
+2026-11-08 11:29:12,805   GAT trained+scored (10s, train 10s)
+2026-11-08 11:29:48,514   GAT+LSTM trained+scored (36s, train 35s)
+2026-11-08 11:29:49,702   GAT+LSTM[incremental]: 1 adaptation events, 1s
+2026-11-08 11:30:10,222   GAT+LSTM[full_retrain]: 1 adaptation events, 21s
+2026-11-08 11:30:10,227 [nsl-kdd seed 2] total 97s
+2026-11-08 11:30:13,543 [unsw-nb15 seed 0] windows: train 547 val 68 stationary 69 stream 321 (W=256, d=50)
+2026-11-08 11:30:23,475   RandomForest done (10s)
+2026-11-08 11:30:27,283   XGBoost done (4s)
+2026-11-08 11:30:39,531   MLP(sklearn) done (12s)
+2026-11-08 11:30:46,762   MLP trained+scored (5s, train 5s)
+2026-11-08 11:30:55,485   GCN trained+scored (9s, train 9s)
+2026-11-08 11:31:08,867   GAT trained+scored (13s, train 13s)
+2026-11-08 11:31:59,185   GAT+LSTM trained+scored (50s, train 49s)
+2026-11-08 11:32:11,148   GAT+LSTM[incremental]: 2 adaptation events, 12s
+2026-11-08 11:33:17,643   GAT+LSTM[full_retrain]: 2 adaptation events, 66s
+2026-11-08 11:33:17,647 [unsw-nb15 seed 0] total 187s
+2026-11-08 11:33:21,012 [unsw-nb15 seed 1] windows: train 547 val 68 stationary 69 stream 321 (W=256, d=50)
+2026-11-08 11:33:31,922   RandomForest done (11s)
+2026-11-08 11:33:35,229   XGBoost done (3s)
+2026-11-08 11:33:46,941   MLP(sklearn) done (12s)
+2026-11-08 11:33:54,541   MLP trained+scored (5s, train 5s)
+2026-11-08 11:34:06,736   GCN trained+scored (12s, train 12s)
+2026-11-08 11:34:23,276   GAT trained+scored (17s, train 16s)
+2026-11-08 11:35:12,109   GAT+LSTM trained+scored (49s, train 48s)
+2026-11-08 11:35:15,048   GAT+LSTM[incremental]: 1 adaptation events, 3s
+2026-11-08 11:35:42,238   GAT+LSTM[full_retrain]: 1 adaptation events, 27s
+2026-11-08 11:35:42,239 [unsw-nb15 seed 1] total 145s
+2026-11-08 11:35:46,815 [unsw-nb15 seed 2] windows: train 547 val 68 stationary 69 stream 321 (W=256, d=50)
+2026-11-08 11:35:58,187   RandomForest done (11s)
+2026-11-08 11:36:01,653   XGBoost done (3s)
+2026-11-08 11:36:27,925   MLP(sklearn) done (26s)
+2026-11-08 11:36:36,092   MLP trained+scored (6s, train 6s)
+2026-11-08 11:36:46,694   GCN trained+scored (11s, train 10s)
+2026-11-08 11:37:00,685   GAT trained+scored (14s, train 14s)
+2026-11-08 11:37:48,261   GAT+LSTM trained+scored (48s, train 47s)
+2026-11-08 11:37:51,475   GAT+LSTM[incremental]: 2 adaptation events, 3s
+2026-11-08 11:38:47,576   GAT+LSTM[full_retrain]: 2 adaptation events, 56s
+2026-11-08 11:38:47,580 [unsw-nb15 seed 2] total 185s
+2026-11-08 11:38:52,138 [ton-iot seed 0] windows: train 296 val 37 stationary 38 stream 452 (W=256, d=58)
+2026-11-08 11:38:54,524   RandomForest done (2s)
+2026-11-08 11:38:56,870   XGBoost done (2s)
+2026-11-08 11:39:06,767   MLP(sklearn) done (10s)
+2026-11-08 11:39:11,161   MLP trained+scored (3s, train 3s)
+2026-11-08 11:39:16,905   GCN trained+scored (6s, train 5s)
+2026-11-08 11:39:24,356   GAT trained+scored (7s, train 7s)
+2026-11-08 11:39:52,248   GAT+LSTM trained+scored (28s, train 27s)
+2026-11-08 11:39:56,296   GAT+LSTM[incremental]: 2 adaptation events, 4s
+2026-11-08 11:40:49,812   GAT+LSTM[full_retrain]: 2 adaptation events, 54s
+2026-11-08 11:40:49,817 [ton-iot seed 0] total 122s
+2026-11-08 11:40:54,882 [ton-iot seed 1] windows: train 296 val 37 stationary 38 stream 452 (W=256, d=58)
+2026-11-08 11:40:57,049   RandomForest done (2s)
+2026-11-08 11:40:59,464   XGBoost done (2s)
+2026-11-08 11:41:05,253   MLP(sklearn) done (6s)
+2026-11-08 11:41:09,746   MLP trained+scored (3s, train 3s)
+2026-11-08 11:41:15,522   GCN trained+scored (6s, train 5s)
+2026-11-08 11:41:24,552   GAT trained+scored (9s, train 9s)
+2026-11-08 11:41:53,565   GAT+LSTM trained+scored (29s, train 28s)
+2026-11-08 11:41:57,973   GAT+LSTM[incremental]: 2 adaptation events, 4s
+2026-11-08 11:42:54,570   GAT+LSTM[full_retrain]: 2 adaptation events, 57s
+2026-11-08 11:42:54,574 [ton-iot seed 1] total 125s
+2026-11-08 11:42:59,650 [ton-iot seed 2] windows: train 296 val 37 stationary 38 stream 452 (W=256, d=58)
+2026-11-08 11:43:01,734   RandomForest done (2s)
+2026-11-08 11:43:05,076   XGBoost done (3s)
+2026-11-08 11:43:12,662   MLP(sklearn) done (8s)
+2026-11-08 11:43:16,662   MLP trained+scored (3s, train 3s)
+2026-11-08 11:43:21,766   GCN trained+scored (5s, train 5s)
+2026-11-08 11:43:28,884   GAT trained+scored (7s, train 7s)
+2026-11-08 11:43:57,888   GAT+LSTM trained+scored (29s, train 28s)
+2026-11-08 11:44:01,505   GAT+LSTM[incremental]: 1 adaptation events, 4s
+2026-11-08 11:45:32,078   GAT+LSTM[full_retrain]: 3 adaptation events, 91s
+2026-11-08 11:45:32,080 [ton-iot seed 2] total 157s
+2026-11-08 11:45:33,612 wrote results to C:\Users\sayaseng\tgnn-ids\results\multi

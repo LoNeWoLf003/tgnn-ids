@@ -1,0 +1,254 @@
+2026-11-22 11:57:49,206 [nsl-kdd seed 0] windows: train 393 val 49 stationary 50 stream 88 (W=256, d=70)
+2026-11-22 11:57:53,635   RandomForest done (4s)
+2026-11-22 11:58:12,806   RandomForest[full_retrain]: 1 adaptation events, 19s
+2026-11-22 11:58:24,715   RandomForest[replay]: 1 adaptation events, 12s
+2026-11-22 11:58:26,600   XGBoost done (2s)
+2026-11-22 11:58:33,072   XGBoost[full_retrain]: 1 adaptation events, 6s
+2026-11-22 11:58:36,728   XGBoost[replay]: 1 adaptation events, 4s
+2026-11-22 11:58:46,298   MLP(sklearn) done (10s)
+2026-11-22 11:59:16,768   MLP(sklearn)[full_retrain]: 1 adaptation events, 30s
+2026-11-22 11:59:30,035   MLP(sklearn)[replay]: 1 adaptation events, 13s
+2026-11-22 11:59:37,423   MLP trained+scored (4s, train 4s)
+2026-11-22 11:59:45,344   GCN trained+scored (8s, train 8s)
+2026-11-22 11:59:58,563   GAT trained+scored (13s, train 13s)
+2026-11-22 12:00:25,883   GAT+LSTM trained+scored (27s, train 27s)
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 12:00:27,202   GAT+LSTM[incremental]: 1 adaptation events, 1s
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 12:00:45,500   GAT+LSTM[full_retrain]: 1 adaptation events, 18s
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 12:00:47,301   GAT+LSTM[incr_replay]: 1 adaptation events, 2s
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 12:00:48,414   GAT+LSTM[hybrid]: 1 adaptation events, 1s
+2026-11-22 12:00:48,414 [nsl-kdd seed 0] total 181s
+2026-11-22 12:00:50,471 [nsl-kdd seed 1] windows: train 393 val 49 stationary 50 stream 88 (W=256, d=70)
+2026-11-22 12:00:53,842   RandomForest done (3s)
+2026-11-22 12:01:13,104   RandomForest[full_retrain]: 1 adaptation events, 19s
+2026-11-22 12:01:26,620   RandomForest[replay]: 1 adaptation events, 14s
+2026-11-22 12:01:28,742   XGBoost done (2s)
+2026-11-22 12:01:34,493   XGBoost[full_retrain]: 1 adaptation events, 6s
+2026-11-22 12:01:39,747   XGBoost[replay]: 1 adaptation events, 5s
+2026-11-22 12:02:48,467   MLP(sklearn) done (69s)
+2026-11-22 12:04:02,730   MLP(sklearn)[full_retrain]: 1 adaptation events, 74s
+2026-11-22 12:04:15,190   MLP(sklearn)[replay]: 1 adaptation events, 12s
+2026-11-22 12:04:21,918   MLP trained+scored (4s, train 4s)
+2026-11-22 12:04:29,660   GCN trained+scored (8s, train 8s)
+2026-11-22 12:04:42,887   GAT trained+scored (13s, train 13s)
+2026-11-22 12:05:18,560   GAT+LSTM trained+scored (36s, train 35s)
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 12:05:19,731   GAT+LSTM[incremental]: 1 adaptation events, 1s
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 12:05:40,231   GAT+LSTM[full_retrain]: 1 adaptation events, 21s
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 12:05:42,165   GAT+LSTM[incr_replay]: 1 adaptation events, 2s
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 12:05:43,524   GAT+LSTM[hybrid]: 1 adaptation events, 1s
+2026-11-22 12:05:43,524 [nsl-kdd seed 1] total 295s
+2026-11-22 12:05:45,914 [nsl-kdd seed 2] windows: train 393 val 49 stationary 50 stream 88 (W=256, d=70)
+2026-11-22 12:05:50,723   RandomForest done (5s)
+2026-11-22 12:06:12,977   RandomForest[full_retrain]: 1 adaptation events, 22s
+2026-11-22 12:06:42,664   RandomForest[replay]: 1 adaptation events, 30s
+2026-11-22 12:06:46,232   XGBoost done (4s)
+2026-11-22 12:06:55,914   XGBoost[full_retrain]: 1 adaptation events, 10s
+2026-11-22 12:07:19,099   XGBoost[replay]: 1 adaptation events, 23s
+2026-11-22 12:08:05,748   MLP(sklearn) done (47s)
+2026-11-22 12:09:03,112   MLP(sklearn)[full_retrain]: 1 adaptation events, 57s
+2026-11-22 12:09:22,527   MLP(sklearn)[replay]: 1 adaptation events, 19s
+2026-11-22 12:09:31,819   MLP trained+scored (6s, train 6s)
+2026-11-22 12:09:43,044   GCN trained+scored (11s, train 11s)
+2026-11-22 12:10:01,008   GAT trained+scored (18s, train 18s)
+2026-11-22 12:11:38,709   GAT+LSTM trained+scored (98s, train 97s)
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 12:11:42,233   GAT+LSTM[incremental]: 1 adaptation events, 4s
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 12:12:41,460   GAT+LSTM[full_retrain]: 1 adaptation events, 59s
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 12:12:43,848   GAT+LSTM[incr_replay]: 1 adaptation events, 2s
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 12:12:45,401   GAT+LSTM[hybrid]: 1 adaptation events, 2s
+2026-11-22 12:12:45,401 [nsl-kdd seed 2] total 422s
+2026-11-22 12:12:55,748 [unsw-nb15 seed 0] windows: train 547 val 68 stationary 69 stream 321 (W=256, d=50)
+2026-11-22 12:13:25,375   RandomForest done (30s)
+2026-11-22 12:14:48,776   RandomForest[full_retrain]: 1 adaptation events, 83s
+2026-11-22 12:15:44,129   RandomForest[replay]: 1 adaptation events, 55s
+2026-11-22 12:15:48,680   XGBoost done (5s)
+2026-11-22 12:16:01,211   XGBoost[full_retrain]: 1 adaptation events, 13s
+2026-11-22 12:16:09,247   XGBoost[replay]: 1 adaptation events, 8s
+2026-11-22 12:16:29,380   MLP(sklearn) done (20s)
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:781: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (60) reached and the optimization hasn't converged yet.
+  warnings.warn(
+2026-11-22 12:18:07,296   MLP(sklearn)[full_retrain]: 1 adaptation events, 98s
+2026-11-22 12:18:29,216   MLP(sklearn)[replay]: 1 adaptation events, 22s
+2026-11-22 12:18:40,147   MLP trained+scored (8s, train 8s)
+2026-11-22 12:18:55,559   GCN trained+scored (15s, train 15s)
+2026-11-22 12:19:15,228   GAT trained+scored (20s, train 19s)
+2026-11-22 12:21:31,604   GAT+LSTM trained+scored (136s, train 134s)
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 12:21:39,737   GAT+LSTM[incremental]: 2 adaptation events, 8s
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 12:23:25,977   GAT+LSTM[full_retrain]: 2 adaptation events, 106s
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 12:23:44,935   GAT+LSTM[incr_replay]: 2 adaptation events, 19s
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 12:24:25,809   GAT+LSTM[hybrid]: 2 adaptation events, 41s
+2026-11-22 12:24:25,809 [unsw-nb15 seed 0] total 700s
+2026-11-22 12:24:36,718 [unsw-nb15 seed 1] windows: train 547 val 68 stationary 69 stream 321 (W=256, d=50)
+2026-11-22 12:24:55,453   RandomForest done (19s)
+2026-11-22 12:26:19,683   RandomForest[full_retrain]: 1 adaptation events, 84s
+2026-11-22 12:27:18,563   RandomForest[replay]: 1 adaptation events, 59s
+2026-11-22 12:27:22,545   XGBoost done (4s)
+2026-11-22 12:27:33,757   XGBoost[full_retrain]: 1 adaptation events, 11s
+2026-11-22 12:27:41,801   XGBoost[replay]: 1 adaptation events, 8s
+2026-11-22 12:28:16,701   MLP(sklearn) done (35s)
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:781: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (60) reached and the optimization hasn't converged yet.
+  warnings.warn(
+2026-11-22 12:29:44,198   MLP(sklearn)[full_retrain]: 1 adaptation events, 87s
+2026-11-22 12:30:13,429   MLP(sklearn)[replay]: 1 adaptation events, 29s
+2026-11-22 12:30:24,722   MLP trained+scored (9s, train 8s)
+2026-11-22 12:30:43,813   GCN trained+scored (19s, train 19s)
+2026-11-22 12:31:48,135   GAT trained+scored (64s, train 64s)
+2026-11-22 12:32:48,253   GAT+LSTM trained+scored (60s, train 59s)
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 12:32:52,805   GAT+LSTM[incremental]: 1 adaptation events, 5s
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 12:33:29,919   GAT+LSTM[full_retrain]: 1 adaptation events, 37s
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 12:33:34,931   GAT+LSTM[incr_replay]: 1 adaptation events, 5s
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 12:33:38,389   GAT+LSTM[hybrid]: 1 adaptation events, 3s
+2026-11-22 12:33:38,389 [unsw-nb15 seed 1] total 552s
+2026-11-22 12:33:42,883 [unsw-nb15 seed 2] windows: train 547 val 68 stationary 69 stream 321 (W=256, d=50)
+2026-11-22 12:34:02,623   RandomForest done (20s)
+2026-11-22 12:35:13,833   RandomForest[full_retrain]: 1 adaptation events, 71s
+2026-11-22 12:36:15,895   RandomForest[replay]: 1 adaptation events, 62s
+2026-11-22 12:36:20,563   XGBoost done (5s)
+2026-11-22 12:36:33,794   XGBoost[full_retrain]: 1 adaptation events, 13s
+2026-11-22 12:36:42,886   XGBoost[replay]: 1 adaptation events, 9s
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:781: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (60) reached and the optimization hasn't converged yet.
+  warnings.warn(
+2026-11-22 12:38:19,413   MLP(sklearn) done (97s)
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:781: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (60) reached and the optimization hasn't converged yet.
+  warnings.warn(
+2026-11-22 12:39:41,870   MLP(sklearn)[full_retrain]: 1 adaptation events, 82s
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:781: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (60) reached and the optimization hasn't converged yet.
+  warnings.warn(
+2026-11-22 12:40:20,792   MLP(sklearn)[replay]: 1 adaptation events, 39s
+2026-11-22 12:40:29,480   MLP trained+scored (6s, train 6s)
+2026-11-22 12:40:44,399   GCN trained+scored (15s, train 15s)
+2026-11-22 12:41:04,528   GAT trained+scored (20s, train 20s)
+2026-11-22 12:41:49,650   GAT+LSTM trained+scored (45s, train 44s)
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 12:41:55,210   GAT+LSTM[incremental]: 2 adaptation events, 6s
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 12:44:01,732   GAT+LSTM[full_retrain]: 2 adaptation events, 127s
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 12:44:13,576   GAT+LSTM[incr_replay]: 2 adaptation events, 12s
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 12:45:36,694   GAT+LSTM[hybrid]: 2 adaptation events, 83s
+2026-11-22 12:45:36,694 [unsw-nb15 seed 2] total 718s
+2026-11-22 12:45:44,785 [ton-iot seed 0] windows: train 296 val 37 stationary 38 stream 452 (W=256, d=58)
+2026-11-22 12:45:50,376   RandomForest done (6s)
+2026-11-22 12:47:11,874   RandomForest[full_retrain]: 1 adaptation events, 81s
+2026-11-22 12:48:16,343   RandomForest[replay]: 2 adaptation events, 64s
+2026-11-22 12:48:18,291   XGBoost done (2s)
+2026-11-22 12:48:30,138   XGBoost[full_retrain]: 2 adaptation events, 12s
+2026-11-22 12:48:35,815   XGBoost[replay]: 2 adaptation events, 6s
+2026-11-22 12:48:49,603   MLP(sklearn) done (14s)
+2026-11-22 12:50:10,537   MLP(sklearn)[full_retrain]: 2 adaptation events, 81s
+2026-11-22 12:50:28,291   MLP(sklearn)[replay]: 2 adaptation events, 18s
+2026-11-22 12:50:34,401   MLP trained+scored (5s, train 5s)
+2026-11-22 12:50:45,246   GCN trained+scored (11s, train 10s)
+2026-11-22 12:50:59,221   GAT trained+scored (14s, train 13s)
+2026-11-22 12:52:14,237   GAT+LSTM trained+scored (75s, train 72s)
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 12:52:21,335   GAT+LSTM[incremental]: 2 adaptation events, 7s
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 12:54:51,606   GAT+LSTM[full_retrain]: 2 adaptation events, 150s
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 12:55:01,086   GAT+LSTM[incr_replay]: 2 adaptation events, 9s
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 12:55:08,653   GAT+LSTM[hybrid]: 2 adaptation events, 8s
+2026-11-22 12:55:08,653 [ton-iot seed 0] total 572s
+2026-11-22 12:55:20,736 [ton-iot seed 1] windows: train 296 val 37 stationary 38 stream 452 (W=256, d=58)
+2026-11-22 12:55:25,365   RandomForest done (5s)
+2026-11-22 12:56:40,729   RandomForest[full_retrain]: 1 adaptation events, 75s
+2026-11-22 12:57:37,799   RandomForest[replay]: 2 adaptation events, 57s
+2026-11-22 12:57:39,703   XGBoost done (2s)
+2026-11-22 12:57:49,551   XGBoost[full_retrain]: 2 adaptation events, 10s
+2026-11-22 12:57:54,230   XGBoost[replay]: 2 adaptation events, 5s
+2026-11-22 12:58:06,890   MLP(sklearn) done (13s)
+2026-11-22 12:59:00,932   MLP(sklearn)[full_retrain]: 2 adaptation events, 54s
+2026-11-22 12:59:17,001   MLP(sklearn)[replay]: 2 adaptation events, 16s
+2026-11-22 12:59:22,500   MLP trained+scored (4s, train 4s)
+2026-11-22 12:59:31,871   GCN trained+scored (9s, train 9s)
+2026-11-22 12:59:46,781   GAT trained+scored (15s, train 14s)
+2026-11-22 13:01:08,651   GAT+LSTM trained+scored (82s, train 79s)
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 13:01:18,430   GAT+LSTM[incremental]: 2 adaptation events, 10s
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 13:03:06,566   GAT+LSTM[full_retrain]: 2 adaptation events, 108s
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 13:03:14,086   GAT+LSTM[incr_replay]: 2 adaptation events, 8s
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 13:03:19,952   GAT+LSTM[hybrid]: 2 adaptation events, 6s
+2026-11-22 13:03:19,952 [ton-iot seed 1] total 491s
+2026-11-22 13:03:26,904 [ton-iot seed 2] windows: train 296 val 37 stationary 38 stream 452 (W=256, d=58)
+2026-11-22 13:03:31,404   RandomForest done (4s)
+2026-11-22 13:04:42,204   RandomForest[full_retrain]: 1 adaptation events, 71s
+2026-11-22 13:05:33,129   RandomForest[replay]: 2 adaptation events, 51s
+2026-11-22 13:05:35,189   XGBoost done (2s)
+2026-11-22 13:05:45,849   XGBoost[full_retrain]: 2 adaptation events, 11s
+2026-11-22 13:05:51,343   XGBoost[replay]: 2 adaptation events, 5s
+2026-11-22 13:06:03,516   MLP(sklearn) done (12s)
+2026-11-22 13:06:53,247   MLP(sklearn)[full_retrain]: 2 adaptation events, 50s
+2026-11-22 13:07:17,920   MLP(sklearn)[replay]: 2 adaptation events, 25s
+2026-11-22 13:07:24,590   MLP trained+scored (5s, train 5s)
+2026-11-22 13:07:36,275   GCN trained+scored (12s, train 11s)
+2026-11-22 13:07:52,162   GAT trained+scored (16s, train 15s)
+2026-11-22 13:09:18,967   GAT+LSTM trained+scored (87s, train 84s)
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 13:09:26,881   GAT+LSTM[incremental]: 1 adaptation events, 8s
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 13:12:05,898   GAT+LSTM[full_retrain]: 3 adaptation events, 159s
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 13:12:11,050   GAT+LSTM[incr_replay]: 1 adaptation events, 5s
+C:\Users\sayaseng\tgnn-ids\.venv\lib\site-packages\torch\nn\modules\rnn.py:1124: UserWarning: RNN module weights are not part of single contiguous chunk of memory. This means they need to be compacted at every call, possibly greatly increasing memory usage. To compact weights again call flatten_parameters(). (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\aten\src\ATen\native\cudnn\RNN.cpp:1412.)
+  result = _VF.lstm(
+2026-11-22 13:12:15,422   GAT+LSTM[hybrid]: 1 adaptation events, 4s
+2026-11-22 13:12:15,422 [ton-iot seed 2] total 535s
+2026-11-22 13:12:17,200 wrote results to results\multi_v2

@@ -1,0 +1,1275 @@
+\documentclass[twocolumn]{llncs}
+\addtolength{\oddsidemargin}{-1.2in}
+\addtolength{\evensidemargin}{-1.2in}
+\addtolength{\textwidth}{2.4in}
+\addtolength{\topmargin}{-0.8in}
+\addtolength{\textheight}{1in}
+% ---------------------------------------------------------------------------
+% Packages
+% ---------------------------------------------------------------------------
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!50!black,
+    citecolor=blue!50!black,
+    urlcolor=blue!50!black
+}
+
+\setlist{nosep}
+\captionsetup{skip=4pt}
+\graphicspath{{figures/}{./}}
+\setlength{\columnsep}{0.3in}
+\emergencystretch=3em
+
+\begin{document}
+
+\title{Adaptive Temporal Graph Learning for Network Anomaly Detection Under Concept Drift}
+
+\author{Dr. Arpita Dutta\inst{1} \and Sayak Sengupta\inst{2} \and Avinanda Guchait\inst{3}}
+
+\institute{
+Department of Computer Science Engineering (AIML), Techno Main Salt Lake, Kolkata, India\\
+\email{john@example.com}
+\and
+ISG DevOps, Keysight Technologies, Kolkata, India\\
+\email{sayak.sengupta@keysight.com}
+\and
+Department of Computer Science Engineering (Data Science), Techno Main Salt Lake, Kolkata, India\\
+\email{avinandaguchait123@gmail.com}
+}
+
+\maketitle
+
+\begin{abstract}
+Network intrusion detection is often framed as a static i.i.d.\ classification task, despite real traffic being relational and non-stationary. We study a temporal graph {\color{red}IDS} that represents traffic as per-window graphs, encodes them with a Graph Attention Network (GAT), tracks them with an LSTM, and adapts via an ADWIN drift detector, evaluated under a strictly time-ordered, never-shuffled protocol. {\color{red}On CIC-IDS2017 (2{,}572{,}640 flows, 2{,}577 windows, five days), full retraining after detected drift raises rolling F1 from 0.195 to 0.353 at $157\times$ the wall-clock cost and $3.9\times$ the peak GPU memory of incremental fine-tuning, which gives no measurable benefit (0.196 vs.\ 0.195) --- a negative result reported rather than omitted. Under the classical stationary split, every window-level model collapses to F1~$\approx$~0, traced to a train/test anomaly-rate shift induced by the split itself (13.4\% vs.\ 84.3\%) rather than a modeling failure, since the same architecture reaches F1 0.195 and ROC-AUC 0.61 across the full sequence. We frame the contribution as a drift-aware evaluation methodology for temporal graph IDS --- not a new architecture --- reporting both favorable and unfavorable outcomes.} {\color{red}A cross-dataset replication on NSL-KDD, UNSW-NB15 and TON\_IoT (per-flow scoring, 3 seeds) shows that every supervised model scores F1 $\ge$ 0.93 on a stationary hold-out yet loses up to 0.24 F1 under drift; that, unadapted, the GAT+LSTM does not beat flow-level baselines (mean stream F1 0.828 vs.\ 0.882 for Random Forest); and that drift-triggered adaptation lifts it to 0.884 (full retrain) or 0.877 (incremental, about $40$--$50\times$ cheaper), on par with an unadapted Random Forest that received no adaptation.}
+
+\keywords{Network Intrusion Detection \and Graph Neural Networks \and Concept Drift \and Temporal Graph Learning \and CIC-IDS2017.}
+\end{abstract}
+
+% =============================================================================
+\section{Introduction}
+% =============================================================================
+
+Real network traffic is dynamic: the mix of applications, users, and attacks observed today is not
+the mix observed next week. Yet intrusion detection systems (IDS) are almost universally built and
+evaluated under a stationary assumption --- trained once, tested on a random held-out split of the
+\emph{same} corpus, and deployed as if that distribution persists indefinitely. This produces
+impressive published accuracy but does not reflect deployment, a mismatch noted as early as Sommer
+and Paxson's critique of ML evaluation practice in network security \cite{sommer2010closedworld}.
+
+{\color{blue}The combination of users, apps, and threats seen today will not be the same as the combination seen tomorrow since real network traffic is dynamic. However, intrusion detection systems (IDS) are almost always conceived and evaluated under a stationary assumption: they are trained, tested on a random held-out split of the same corpus, and deployed as though that distribution is static. As early as Sommer and Paxson's evaluation of ML methodology in the context of network security \cite{sommer2010closedworld}, this provides excellent published correctness but fails to reflect deployment. 
+
+A new design is motivated by two characteristics of network traffic. The first is that the traffic is relational: similar flows are eliminated by a row-by-row classifier but preserved by a graph representation, a good fit for graph neural networks (GNNs). The second is that a temporal encoder is needed on top of the per-slice embeddings, as the traffic also \emph{evolves temporally}, thus a per-slice graph encoder cannot capture the behavior changes \emph{across} slices. When viewed as a whole, these suggest that a graph-structured and temporal aware detector should degrade more gracefully under concept drift than a static flow-classifier, provided it can simultaneously detect and adapt to drift without retraining from scratch each time. CIC-IDS2017 provides a concrete example of this: Monday is completely benign, and every subsequent day features a new attack family (brute-force, denial-of-service, web attack/infiltration, botnet/port-scan/DDoS). A model which is trained only on the first two days and is never updated will, by definition, never encounter what comes next.}
+
+Two properties of network traffic motivate a different design. Traffic is \emph{relational}: which
+flows resemble one another is discarded by a row-by-row classifier but preserved by a graph
+representation, a natural fit for graph neural networks (GNNs). Traffic also \emph{evolves
+temporally}, so a per-slice graph encoder alone cannot capture how behavior changes \emph{across}
+slices --- a temporal encoder on top of the per-slice embeddings is needed. Together, these suggest
+a detector that is both graph-structured and temporally aware should degrade more gracefully under
+\emph{concept drift} than a static flow classifier, provided it can also \emph{detect} drift and
+\emph{adapt} without a full retrain every time. CIC-IDS2017 illustrates this directly: Monday is
+entirely benign, and each subsequent day introduces a new attack family (brute-force,
+denial-of-service, web attack/infiltration, botnet/port-scan/DDoS) --- a model trained only on the
+first two days and never updated will, by construction, never have seen what comes after.
+
+The objective of this work is to evaluate whether a simple GAT--LSTM temporal graph model can maintain anomaly-detection performance under such temporal distribution shifts when evaluated using a strictly time-ordered protocol. The study focuses on evaluation methodology and adaptation behavior rather than proposing a new graph or temporal architecture. The main contributions of  this work includes \textit{ drift aware evaluation methodology} where we evaluate network anomaly detection using a strictly time-ordered, never-shuffled protocol in which models are trained only on past observations and evaluated on subsequent traffic containing different attack phases,\textit{ graph-temporal detection pipeline} where we represent each traffic window as a flow-similarity graph, encode the graph using a Graph Attention Network (GAT), model temporal dependencies using an LSTM, and monitor the learned representation with ADWIN for drift detection,\textit{ accuracy and adaptation-cost analysis}  in which we compare no adaptation, incremental fine-tuning, and full retraining under the same drift-detection framework and report both detection performance and adaptation cost, including wall-clock time and peak GPU memory.  Section~\ref{sec:related} reviews related work; Section~\ref{sec:problem} formalizes the
+problem; Section~\ref{sec:method} describes the pipeline; Section~\ref{sec:experiments} reports
+every experiment; Section~\ref{sec:discussion} compares against prior work;
+Section~\ref{sec:limitations} states limitations; Section~\ref{sec:conclusion} concludes.
+
+% =============================================================================
+\section{Related Work}
+\label{sec:related}
+% =============================================================================
+
+\subsection{ML-based intrusion detection}
+
+The dominant paradigm for IDS research on public flow datasets is supervised, flow-level
+classification: each flow is reduced to a fixed-length feature vector (CICFlowMeter produces
+roughly 70 statistics per flow for CIC-IDS2017 \cite{sharafaldin2018cicids2017}), and a classifier
+--- Random Forest, XGBoost \cite{chen2016xgboost}, MLPs, or autoencoders --- separates benign from
+attack traffic. This body of work almost universally reports a random or otherwise i.i.d.\ split,
+which by construction cannot expose degradation under a shifting distribution; Experiments A and B
+(Section~\ref{sec:experiments}) reproduce this classical protocol and then depart from it to make
+the gap concrete. Several contemporaneous studies benchmark this same paradigm on CIC-IDS2017 and
+related tasks, directly comparable to the flow-level baselines in Table~\ref{tab:expa}: Vedash
+et~al.\ \cite{vedash2026xai} benchmark Random Forest, XGBoost, and a 1D CNN on the identical
+dataset; Akanksha \cite{akanksha2025malware} and Ravi and Poornima \cite{ravi2025flowmetadata}
+report similarly near-perfect tree-ensemble results on related flow-classification tasks; and
+R{\'i}os-Guiral et~al.\ \cite{riosguiral2024flowspackets} compare flow- and packet-level
+representations, a granularity question adjacent to this paper's flow-vs-window distinction
+(Section~\ref{sec:method}). Viksha and Singh \cite{viksha2024sampling} show that traffic
+\emph{sampling} affects ML-IDS accuracy, paralleling this paper's Experiment A finding that a naive
+chronological split degrades window-level detection (Section~\ref{sec:expa}). Unsupervised
+alternatives such as $k$-means network slicing \cite{aouedi2021unsupervised} and
+hierarchical-clustering-based flow reduction \cite{su2018hierarchical} offer a different route to
+the imbalance/scale problem than this paper's fixed-size windowing (Section~\ref{sec:limitations});
+tabular ML is also applied across network-measurement tasks beyond security, e.g.\ optical-network
+traffic forecasting \cite{szostak2020lda}.
+
+\subsection{Graph neural networks for cybersecurity}
+
+A growing line of work represents network traffic as a graph and applies GNNs --- typically GCN
+\cite{kipf2017gcn} or GAT \cite{velickovic2018gat}, surveyed in \cite{zhou2020gnnreview} --- to
+classify nodes, edges, or whole graphs as malicious, using host-communication graphs or, when host
+identity is unavailable, flow-similarity graphs (the design this paper is forced into,
+Section~\ref{sec:method}). The common limitation, and the gap Experiments B/C target, is that the
+graph is treated as \emph{static per snapshot} rather than as a tracked, adapted sequence.
+The systematic review of Ares-Robledo et~al.\ \cite{aresrobledo2026gnnsurvey}, covering 79
+dynamic/temporal GNN anomaly-detection studies in cybersecurity, reaches a consistent conclusion:
+GCN, GAT, and hybrid spatiotemporal models dominate, yet many studies do not report enough detail on
+graph construction or \emph{temporal splitting} to judge robustness, evaluation concentrates on a
+small set of reused protocols, accuracy/ROC-style metrics can mislead under severe class skew, and
+continual-learning or drift-adaptive implementations tailored to dynamic anomaly detection remain
+rare, so practical deployments ``may still hinge on frequent retraining.'' These are precisely the
+reporting gaps this paper's strictly time-ordered protocol, explicit graph-construction description,
+and adaptation-cost measurements are designed to close.
+
+\subsection{Temporal graphs and concept drift}
+
+Dynamic-graph architectures such as Temporal Graph Networks (TGN) \cite{rossi2020tgn} and
+EvolveGCN \cite{pareja2020evolvegcn} extend GNNs to graph sequences with more sophisticated memory
+and parameter-evolution mechanisms than a recurrent layer over per-snapshot embeddings. This paper
+deliberately uses the simpler GNN$\rightarrow$LSTM \cite{hochreiter1997lstm} design instead: given
+a single-GPU, few-week execution budget, a more complex temporal-GNN architecture risked displacing
+the drift-detection and adaptation-cost experiments that are this paper's core empirical claim.
+Concept-drift detection is a mature sub-field of streaming ML, with detectors such as ADWIN
+\cite{bifet2007adwin} and distributional-distance measures \cite{gama2014survey} largely
+developed outside the network-security domain. This paper imports ADWIN, via the \emph{river}
+streaming ML library \cite{montiel2021river}, as a drift detector over a scalar summary of the
+model's own learned representation (the L2 norm of the LSTM output $Z_t$), rather than inventing a
+new detector --- the contribution is the application, and the resulting adaptation-cost
+measurement, in this graph-temporal IDS setting.
+
+\subsection{Drift-adaptive and continual learning for intrusion detection}
+
+A recent line of work targets concept drift in IDS directly, mostly on tabular flow features rather
+than graphs. NetGuard \cite{gupta2026netguard} combines density-aware active sampling with deep
+generative augmentation to adapt an NIDS under drift and class imbalance, evaluated on CIC-IDS
+2017/2018 (as a cross-year drift pair), UGR'16, and ACI-IoT23; it reports roughly $2\times$ average
+detection improvement and 8--15$\times$ higher F1 on rare attacks with only 1\% labeled data. Its
+emphasis is label efficiency and rare-class coverage; this paper instead asks what a drift-triggered
+\emph{model update} costs in compute. SSF \cite{zhang2025ssf} is a continual-learning method with a
+strategic sample-selection step (prioritizing samples that cause the drifted pattern) and a
+strategic forgetting step that discards outdated samples when significant drift is detected; it
+reports 90.50\% and 90.27\% accuracy on NSL-KDD and UNSW-NB15. SSF decides \emph{what} to keep in a
+memory buffer, whereas this paper's three strategies decide \emph{how much} of the model to update,
+and neither SSF nor NetGuard uses a graph or temporal encoder.
+
+Drift-aware adaptation has also been studied outside IDS, and the design space is closely related.
+ADA-ADF \cite{li2025adaadf} is an unsupervised streaming time-series anomaly detector that couples a
+hybrid statistical/performance-based drift detector (separating sudden from incremental drift) with a
+replay-based update whose replay ratio is drift-specific, evaluated on four univariate datasets.
+DHDA \cite{xiang2026dhda}, for online configuration-performance learning, uses ADWIN to detect local
+drift and combines cheap incremental updates with periodic full retraining, reporting up to $2\times$
+improvement across eight software systems at reasonable overhead. CGLM \cite{zhou2025cglm} applies a
+graph attention module to multi-stream concept drift, performing lightweight subgraph adjustment when
+no drift is detected and regenerating the correlation graph when drift occurs; it targets traffic and
+weather forecasting rather than security. All three adopt the same incremental-versus-full-update
+split that Experiment D tests, but report accuracy gains, not the wall-clock/memory cost of each
+branch, and none evaluates a graph-temporal IDS on a multi-day attack corpus.
+
+\subsection{Federated and reinforcement-learning IDS}
+
+A parallel literature addresses privacy and adaptivity through federated learning (FL) and
+reinforcement learning (RL). Belenguer et~al.\ \cite{belenguer2025flreview} review FL for IDS
+(LSTM, GRU, and autoencoder-based systems, many evaluated on CIC-IDS2017) and identify statistical
+heterogeneity and device constraints as open problems. FedT-DQN \cite{ma2025fedtdqn} combines a
+Transformer-based federated aggregator with a double Q-network and reports over 99\% accuracy on four
+benchmark datasets. FL-MalDrift \cite{patel2026fmaldrift} runs ADWIN, DDM, EDDM, or HDDM on each
+client and gates server aggregation on EWMA-smoothed drift scores, reporting 94.7\% (Drebin), 96.8\%
+(CICMalDroid 2020), and 92.4\% (chronological AndroZoo split) accuracy; it is the closest of these to
+this paper's use of ADWIN, but for Android malware and not network traffic. Suresh and Jose
+\cite{suresh2025ppo} use Proximal Policy Optimization to reweight Random Forest and CatBoost base
+learners under an MLP meta-learner, reporting 97.16\% average accuracy over five datasets (including
+CICIDS). These systems optimize accuracy, privacy, or ensemble weighting; none models traffic
+relationally or time-orders the evaluation across attack phases.
+
+\medskip
+The gap this paper occupies is the intersection of the above: detection that is graph-structured
+\emph{and} temporal \emph{and} drift-adaptive, evaluated together under one strictly time-ordered
+protocol, with adaptation cost reported alongside accuracy, rather than each property demonstrated
+in isolation as is typical of the literature above.
+
+% =============================================================================
+\section{Problem Formulation}
+\label{sec:problem}
+% =============================================================================
+
+Let a per-window communication graph be
+\begin{equation}
+G_t = (V_t, E_t),
+\end{equation}
+and let the full observed sequence be
+\begin{equation}
+\mathcal{G} = \{G_1, G_2, \ldots, G_T\}.
+\end{equation}
+The detector is a function of the trailing $k$-window history:
+\begin{equation}
+f(\mathcal{G}_{t-k:t}) \rightarrow A_t, \qquad A_t \in [0,1],
+\label{eq:anomaly-score}
+\end{equation}
+the anomaly score for window $t$. A concept-drift detector $D$ monitors a scalar statistic of the
+model's learned representation stream; when it fires, the model is updated,
+\begin{equation}
+M_{t+1} = \mathrm{Update}(M_t, D_t).
+\label{eq:update}
+\end{equation}
+
+\subsubsection{Node/edge definition used in this paper.} The originally intended formulation --- $V_t$
+as network hosts and $E_t$ as who-talked-to-whom communication edges --- requires source/destination
+IP addresses, absent from the CIC-IDS2017 data release available for this work
+(Section~\ref{sec:data}). The formulation is therefore redefined: $V_t$ is the set of flows captured
+in window $t$, and $E_t$ is the set of $k$-nearest-neighbor edges in scaled feature space, computed
+independently per window ($k=8$, symmetrized). The index $t$ enumerates fixed-size, 1{,}000-row
+chunks within a single day-file, in row order; no wall-clock timestamp exists in this data release,
+so chronological order is assumed to equal row order within each day-file
+(Section~\ref{sec:limitations}).
+
+% =============================================================================
+\section{Proposed Method}
+\label{sec:method}
+% =============================================================================
+
+The pipeline (Figure~\ref{fig:pipeline}) turns raw per-day flow records into a sequence of window
+graphs, encodes each graph spatially, tracks the resulting embeddings temporally, scores anomalies,
+monitors for drift, and adapts the model when drift is detected.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  node distance=7mm and 9mm,
+  box/.style={draw, rounded corners, fill=blue!6, align=center, font=\small,
+              text width=2.9cm, minimum height=0.9cm},
+  arr/.style={-{Latex[length=2.2mm]}, thick}
+]
+
+\node[box] (raw) {Raw flow records\\(5 days, CIC-IDS2017)};
+\node[box, below=of raw] (win) {Feature scaling \& fixed-size windowing};
+\node[box, below=of win] (graph) {Per-window $k$-NN\\similarity graph $G_t$};
+\node[box, below=of graph] (gat) {GAT spatial encoder\\$H_t$};
+\node[box, below=of gat] (lstm) {LSTM temporal encoder\\$Z_t$};
+\node[box, below=of lstm] (score) {Anomaly score $A_t$ \&\\attack-type head};
+
+\node[box, fill=orange!8, right=of lstm] (drift) {ADWIN drift\\monitor on $\|Z_t\|_2$};
+\node[box, fill=green!8, below=of drift] (adapt) {Adaptation:\\no-adapt / incremental /\\full retrain};
+
+\draw[arr] (raw) -- (win);
+\draw[arr] (win) -- (graph);
+\draw[arr] (graph) -- (gat);
+\draw[arr] (gat) -- (lstm);
+\draw[arr] (lstm) -- (score);
+\draw[arr] (lstm) -- (drift);
+\draw[arr] (drift) -- node[left,font=\scriptsize]{fires} (adapt);
+\draw[arr, dashed] (adapt) to[bend right=75] node[below,font=\scriptsize]{updates weights} (gat);
+
+\end{tikzpicture}
+\caption{Pipeline overview. Raw flows are windowed and turned into per-window similarity graphs,
+encoded spatially by a GAT and tracked temporally by an LSTM to produce an anomaly score. The same
+temporal representation feeds an ADWIN drift monitor, which triggers one of three adaptation
+strategies when it fires; a triggered strategy updates the spatial and/or temporal encoder before
+the next window is scored.}
+\label{fig:pipeline}
+\end{figure}
+
+\subsection{Flow representation and graph construction}
+Each flow is represented by roughly 70 CICFlowMeter numeric features (packet/byte counts,
+inter-arrival-time statistics, TCP flag counts, subflow and bulk-transfer statistics, active/idle
+timing, and destination port), standardized using statistics fit on Monday+Tuesday only so later
+days' feature scales cannot leak into the stationary-split experiment; each scaled feature vector
+becomes one node's feature vector $x$ in $G_t$. Within each fixed-size window of 1{,}000
+consecutive flows (never spanning a day boundary), a $k$-nearest-neighbor graph is built over the
+scaled feature vectors ($k=8$), then symmetrized into an undirected edge set. Node count varies per
+window (all flows assigned to that window); no padding is used.
+
+\subsection{Temporal modeling}
+A 2-layer GAT ($4$ attention heads, hidden dimension $64$) encodes each window's graph,
+\begin{equation}
+H_t = \mathrm{GAT}(G_t),
+\end{equation}
+followed by mean-pool readout to a single per-window vector. An LSTM (hidden dimension $64$)
+\cite{hochreiter1997lstm} is applied over the trailing $k=6$ window embeddings,
+\begin{equation}
+Z_t = \mathrm{LSTM}(H_{t-k:t}),
+\end{equation}
+producing the window's representation $Z_t$ used in Equation~\eqref{eq:anomaly-score}.
+
+\subsection{Anomaly detection, training, and drift detection}
+A sigmoid anomaly head produces $A_t = \sigma(f(Z_t)) \in [0,1]$; a secondary multi-class
+attack-type head is trained jointly, with total loss $\mathcal{L} = \mathcal{L}_{\mathrm{BCE}} +
+0.5\,\mathcal{L}_{\mathrm{CE}}$. Training uses Adam ($\mathrm{lr}=10^{-3}$) with mixed precision and
+per-epoch checkpointing (model, optimizer, RNG state), verified resumable by a kill-and-resume
+drill mid-epoch. ADWIN monitors the L2 norm of $Z_t$ across the full Monday--Friday sequence as a
+cheap scalar summary of how the model currently represents traffic. Rather than injecting synthetic
+drift, CIC-IDS2017's own day-file boundaries serve as native drift phases: Monday (benign
+baseline), Tuesday (brute-force), Wednesday (DoS), Thursday (web attack/infiltration), Friday
+(botnet/port-scan/DDoS).
+
+\subsection{Adaptive model updating}
+Three strategies are compared behind one interface:
+\begin{itemize}[nosep]
+  \item \emph{No-adapt}: the model is never updated (control condition).
+  \item \emph{Full retrain}: the model is discarded and retrained from scratch on every window
+        observed so far, whenever ADWIN fires.
+  \item \emph{Incremental}: only the LSTM and anomaly head are unfrozen and fine-tuned for 3
+        epochs on a recent window of history (the GAT encoder is left untouched), whenever ADWIN
+        fires.
+\end{itemize}
+Wall-clock time, peak GPU memory, and sample count are logged for every adaptation event.
+
+\subsection{Explainability}
+Last-layer GAT attention weights are extracted for true-positive anomaly windows and visualized as
+the top-10 highest-attention edges, each node labeled by its destination port and truncated attack
+label (the only identifying fields available), framed as ``which neighboring flows most influenced
+this window's anomaly signal'' rather than a host-identity framing.
+
+% =============================================================================
+\section{Experiments}
+\label{sec:experiments}
+% =============================================================================
+
+Every number and figure in this section is generated programmatically by the experiment pipeline
+described in Section~\ref{sec:method}; none are hand-typed.
+
+\subsection{Dataset}
+\label{sec:data}
+
+CIC-IDS2017 \cite{sharafaldin2018cicids2017} provides five days (eight capture files) of labeled
+traffic. Table~\ref{tab:dataset} gives the flow count per file after cleaning (dropping NaN/Inf
+rows and exact duplicates, and fixing known label-encoding typos in the community mirror). The
+redistributed mirror used here (commonly named \emph{MachineLearningCVE}) contains only a
+destination-port field, the $\sim$70 CICFlowMeter statistics, and a label field --- no
+source/destination IP, source port, protocol, flow ID, or timestamp. This is the central data
+constraint that reshaped the node/edge design in Section~\ref{sec:method} (flow-similarity graphs
+rather than host-communication graphs) and is discussed further in Section~\ref{sec:limitations}.
+
+\begin{table}[t]
+\centering
+\caption{CIC-IDS2017 flow counts after cleaning, and window-level composition after windowing
+(1{,}000 flows/window). Window anomaly rate is the fraction of windows containing at least one
+attack flow.}
+\label{tab:dataset}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{|l|r|r|r|}
+\hline
+Day file & Flows & Windows & Anom.\ rate \\
+\hline
+Monday (benign baseline)        & 502{,}650 & 503 & 0.0\% \\
+Tuesday (brute-force)            & 421{,}626 & 422 & 60.4\% \\
+Wednesday (DoS)                  & 610{,}492 & 611 & 66.1\% \\
+Thursday AM (web attacks)        & 164{,}179 & 165 & 39.4\% \\
+Thursday PM (infiltration)       & 252{,}790 & 253 & 11.9\% \\
+Friday AM (benign)               & 184{,}044 & 185 & 63.2\% \\
+Friday PM (port scan)            & 213{,}777 & 214 & 54.7\% \\
+Friday PM (DDoS)                 & 223{,}082 & 224 & 67.0\% \\
+\hline
+\textbf{Total} & \textbf{2{,}572{,}640} & \textbf{2{,}577} & \textbf{44.2\%} \\
+\hline
+\end{tabular}
+\end{table}
+
+At the flow level the dataset is dominated by benign traffic ($\approx$83.5\% BENIGN overall) while at
+the window level, because a window is labeled anomalous if \emph{any} flow within it is an attack,
+the anomaly rate is considerably higher (44.2\% overall) and varies substantially by day, from 0\%
+(Monday) to 67.0\% (Friday DDoS).
+
+\subsection{Experimental protocol}
+All splits are strictly \textbf{time-based} and no random shuffling is used anywhere in this paper.
+Four experiments plus an ablation are run:
+
+\begin{itemize}[nosep]
+  \item \textbf{Experiment A --- Stationary performance.} Monday+Tuesday only, an 80/20
+        chronological split (train on the first 80\% of Mon+Tue windows, test on the trailing
+        20\%) --- the classical protocol used throughout the flow-level IDS literature.
+  \item \textbf{Experiment B --- Temporal contribution.} Models trained once on Monday+Tuesday
+        and \emph{never updated}, scored across the entire Monday-through-Friday sequence
+        (2{,}577 windows), with rolling-window (width 20) metrics averaged over the run.
+  \item \textbf{Experiment C --- Drift degradation.} Reuses Experiment B's run; plots rolling F1
+        over the full sequence with day-boundary phase transitions marked.
+  \item \textbf{Experiment D --- Adaptation comparison.} No-adaptation vs.\ full-retrain vs.\
+        incremental, all drift-triggered by the same ADWIN detector across the same full
+        sequence, with wall-clock time, peak GPU memory, and sample count logged per event.
+  \item \textbf{Ablation.} Model1 (flow-only MLP) $\rightarrow$ Model2 (static GCN)
+        $\rightarrow$ Model3 (GAT+LSTM, no adaptation) $\rightarrow$ Model4 (GAT+LSTM,
+        incremental adaptation), isolating the graph, temporal, and adaptation contributions.
+\end{itemize}
+
+Metrics reported throughout --- F1, precision--recall AUC (PR-AUC), ROC-AUC, and false-positive
+rate (FPR) --- are computed at a 0.5 decision threshold on the anomaly score $A_t$:
+\begin{equation}
+F1 = 2\cdot\frac{P\cdot R}{P+R}, \qquad
+\mathrm{FPR} = \frac{FP}{FP+TN}.
+\label{eq:metrics}
+\end{equation}
+
+\subsection{Hardware and software}
+\label{sec:hw}
+All experiments ran on a single laptop GPU (NVIDIA RTX 2000 Ada Generation, 8\,GB VRAM) under
+Windows~11, with PyTorch 2.6.0, PyTorch Geometric 2.8.0.post1, the \emph{river} streaming library
+0.23.0 (ADWIN), scikit-learn 1.7.2, XGBoost 3.2.0, pandas 2.3.3, and NumPy 2.2.6, using automatic
+mixed precision throughout; peak GPU memory for the largest logged full-retrain event was
+224.7\,MB, comfortably within an 8\,GB budget.
+
+\subsection{Experiment A --- Stationary performance}
+\label{sec:expa}
+
+Table~\ref{tab:expa} reports every model's performance on the Monday+Tuesday, time-based 80/20
+stationary split.
+
+\begin{table*}[!t]
+\centering
+\caption{Experiment A --- stationary performance, Monday+Tuesday, chronological 80/20 split.
+Flow-level baselines are evaluated over 184{,}626 test flows; window/graph-level models are
+evaluated over 185 test windows.}
+\label{tab:expa}
+\begin{tabular}{|l|l|r|r|r|r|}
+\hline
+Model & Scope & F1 & PR-AUC & ROC-AUC & FPR \\
+\hline
+Random Forest        & flow   & \textbf{0.9885} & 0.9991 & 1.0000 & 0.0000 \\
+XGBoost               & flow   & 0.9862 & 0.9996 & 1.0000 & 0.00004 \\
+MLP                   & flow   & 0.9512 & 0.9869 & 0.9997 & 0.00055 \\
+Autoencoder            & flow   & 0.0000 & 0.0171 & 0.7661 & 0.00002 \\
+Sequence LSTM          & window & 0.0000 & 0.7015 & 0.1837 & 0.0000 \\
+Static GCN             & window & 0.0000 & 0.6707 & 0.0723 & 0.0000 \\
+Static GAT             & window & 0.0000 & 0.6555 & 0.0000 & 0.0345 \\
+\textbf{GAT+LSTM (proposed)} & window & \textbf{0.0000} & 0.6697 & 0.0641 & 0.0000 \\
+\hline
+\end{tabular}
+\end{table*}
+
+\subsubsection{Flagged, not hidden.} Every flow-level tabular baseline is near-perfect, as is typical
+of published CIC-IDS2017 results under a stationary split. Every window/graph-level model,
+including the proposed model, collapses to $F1=0$, and several have ROC-AUC below 0.5 (worse than
+random ranking). This is the failure mode the evaluation protocol is designed to flag rather than
+silently report: an underperforming proposed model here signals a bug or evaluation artifact to
+investigate, not a result to publish uncritically.
+
+\subsubsection{Root cause.} Experiment A's window-level test set is small (185 windows) and drawn from
+a chronological slice whose class balance differs sharply from training. Over Monday+Tuesday as a
+whole, 27.6\% of the 925 windows are anomalous; but a chronological 80/20 split places the entire
+185-window test set in Tuesday's brute-force period, where the anomaly rate is 84.3\%, against
+13.4\% in the preceding 740-window training set (Table~\ref{tab:expa-imbalance}). The window-level
+models are trained on a benign-dominated majority and evaluated on a short, heavily attack-skewed
+tail unlike most of training. Table~\ref{tab:trainlog} corroborates this: training loss falls
+monotonically from 0.465 to 0.018, while validation F1 never exceeds 0.061 and is 0 in 11 of 20
+epochs --- a textbook overfitting/distribution-shift signature. This echoes Viksha and Singh's
+\cite{viksha2024sampling} finding that IDS accuracy is sensitive to \emph{how} traffic is sampled
+into a split, not only how much is used; here the chronological split itself concentrates an
+entire attack phase into the test set.
+
+\begin{table}[t]
+\centering
+\caption{Class balance driving Experiment A's degenerate window-level metrics.}
+\label{tab:expa-imbalance}
+\small
+\begin{tabular}{|p{4.4cm}|r|r|}
+\hline
+Split (Mon+Tue windows) & $n$ & Anomaly rate \\
+\hline
+Full Mon+Tue           & 925 & 27.6\% \\
+Train (first 80\%, chronological)  & 740 & 13.4\% \\
+Test (trailing 20\%, chronological = all Tuesday) & 185 & 84.3\% \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{GAT+LSTM training log excerpt (full 20 epochs): training loss falls steadily while
+held-out F1 stays near zero.}
+\label{tab:trainlog}
+\small
+\begin{tabular}{|r|r|r|r|r|}
+\hline
+Epoch & Train loss & Val.\ F1 & Val.\ PR-AUC & Val.\ ROC-AUC \\
+\hline
+0  & 0.4654 & 0.000 & 0.6555 & 0.0000 \\
+5  & 0.0647 & 0.000 & 0.6890 & 0.1519 \\
+10 & 0.0337 & 0.036 & 0.6880 & 0.0853 \\
+15 & 0.0322 & 0.035 & 0.6783 & 0.1001 \\
+19 & 0.0183 & 0.000 & 0.6697 & 0.0641 \\
+\hline
+\end{tabular}
+\end{table}
+
+This needs further investigation before Experiment A's numbers are treated as final; likely fixes
+are a larger or rebalanced window size, a different split point, or per-class-weighted training. We
+report it exactly as observed rather than adjusting the split after the fact for a better number.
+
+\subsection{Experiment B --- Temporal contribution}
+\label{sec:expb}
+
+Unlike Experiment A's 185-window slice, Experiment B scores every model across the entire
+2{,}577-window Monday-through-Friday sequence (rolling 20-window metrics, averaged over the run),
+with each model trained once on Monday+Tuesday and never updated afterward.
+
+\begin{table}[t]
+\centering
+\caption{Experiment B --- full Mon--Fri sequence, no adaptation, rolling-metric average.}
+\label{tab:expb}
+\small
+\begin{tabular}{|l|r|r|r|r|}
+\hline
+Model & F1 & PR-AUC & ROC-AUC & FPR \\
+\hline
+Random Forest (flow, no adapt) & 0.1221 & 0.6999 & 0.7100 & 0.0000 \\
+Static GCN (no adapt)          & 0.1202 & 0.6886 & 0.6384 & 0.0347 \\
+\textbf{GAT+LSTM (no adapt)}   & \textbf{0.1946} & 0.6802 & 0.6083 & 0.1170 \\
+\hline
+\end{tabular}
+\end{table}
+
+At full-sequence scale, the picture is markedly more sensible than Experiment A: all three models
+rank better than random (ROC-AUC 0.61--0.71), and the proposed GAT+LSTM model has the best F1 of
+the three, though at a higher false-positive rate than the flow-level Random Forest baseline ---
+the first result consistent with the central hypothesis: the graph-temporal model outperforms both
+a static flow classifier and a static graph classifier once evaluated across real day-to-day drift.
+
+\subsection{Experiment C --- Drift degradation}
+\label{sec:expc}
+
+Figure~\ref{fig:drift} plots the GAT+LSTM's rolling F1 (window width 20) across the entire
+Monday-through-Friday sequence, with vertical dashed lines marking the true day-file boundaries.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_drift_degradation.png}
+\caption{Rolling F1 of the no-adaptation GAT+LSTM model across the full Mon--Fri sequence, with
+day-boundary phase transitions marked.}
+\label{fig:drift}
+\end{figure}
+
+The curve is highly non-stationary, as expected of a model never updated after Monday+Tuesday. Two
+brief F1 spikes to $\approx 1.0$ occur early in Tuesday's brute-force period (window 600--800),
+where the model was trained on adjacent data; a further spike appears near the
+Tuesday$\to$Wednesday boundary before collapsing to $F1\approx0$ for almost all of Wednesday and
+both Thursday segments --- the most direct illustration of the drift problem this paper studies,
+since web attacks and infiltration are attack types never seen in training. Performance partially
+recovers late in the sequence (F1 0.6--1.0 through the Friday port-scan and DDoS segments), likely
+because those attack types produce flow-feature signatures closer to Monday+Tuesday training. This
+uneven, day-dependent degradation is itself informative: concept drift here is a sequence of
+distinct, differently-sized shocks, consistent with framing CIC-IDS2017's day boundaries as
+discrete native drift events rather than continuous organic drift (Section~\ref{sec:limitations}).
+
+\subsection{Experiment D --- Adaptation comparison}
+\label{sec:expd}
+
+Table~\ref{tab:expd-acc} reports accuracy under each adaptation strategy across the full sequence;
+Table~\ref{tab:expd-cost} reports the cost of each adaptation event actually triggered by ADWIN.
+
+\begin{table}[t]
+\centering
+\caption{Experiment D --- accuracy by adaptation strategy, full Mon--Fri sequence.}
+\label{tab:expd-acc}
+\small
+\begin{tabular}{|l|r|r|r|r|}
+\hline
+Strategy & F1 & PR-AUC & ROC-AUC & FPR \\
+\hline
+No adaptation            & 0.1946 & 0.6802 & 0.6083 & 0.1170 \\
+Incremental adaptation    & 0.1963 & 0.6773 & 0.6020 & 0.1240 \\
+\textbf{Full retrain}     & \textbf{0.3531} & 0.6865 & 0.6446 & 0.2349 \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Experiment D --- adaptation cost. ``Events'' are the number of times ADWIN triggered that
+strategy across the full sequence; times/memory are averaged over those events.}
+\label{tab:expd-cost}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{|l|r|r|r|r|}
+\hline
+Strategy & Events & Total time & Time/event & Peak GPU mem.\ \\
+\hline
+Full retrain  & 10 & 5\,h 46\,min & 34.57\,min & 224.1\,MB \\
+Incremental   & 8  & 1.77\,min   & 13.25\,s   & 57.8\,MB \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Reading.} Full retraining raises F1 by 81\% relative to doing nothing (0.353 vs.\
+0.195), and modestly improves PR-AUC/ROC-AUC, but costs $\approx 157\times$ more wall-clock time
+per event (34.57 min vs.\ 13.25 s) and $\approx 3.9\times$ more peak GPU memory (224.1 vs.\
+57.8\,MB). The lightweight incremental strategy --- fine-tuning only the LSTM and anomaly head for
+3 epochs on recent data --- essentially did not help (0.1963 vs.\ 0.1946 F1, within measurement
+noise): cheap, last-layer-only adaptation, as implemented here, is not sufficient to recover full
+retraining's accuracy gain. This is a real accuracy/cost trade-off rather than a ``best of both
+worlds,'' and it is the paper's clearest, most decisively supported empirical claim. Both
+strategies' peak GPU memory is small in absolute terms; the practically important cost
+differentiator is wall-clock time, not memory.
+
+\subsection{Ablation}
+\label{sec:ablation}
+
+Table~\ref{tab:ablation} isolates the graph, temporal, and adaptation contributions in turn.
+
+\begin{table}[t]
+\centering
+\caption{Ablation. Model1/Model2 are evaluated on Experiment A's 185-window slice (see the
+caveat in Section~\ref{sec:expa}); Model3/Model4 are evaluated on Experiment B/D's full
+2{,}577-window, 2{,}571-evaluation sequence.}
+\label{tab:ablation}
+\small
+\begin{tabular}{|p{3.5cm}|p{3.2cm}|r|}
+\hline
+Model & Isolates & F1 \\
+\hline
+Model1 --- flow-only MLP           & no graph, no time                         & 0.9512$^{*}$ \\
+Model2 --- static GCN               & +graph, no time                            & 0.0000$^{*}$ \\
+Model3 --- GAT+LSTM, no adaptation  & +graph, +time                              & 0.1946 \\
+Model4 --- GAT+LSTM, incremental    & +graph, +time, +cheap adaptation          & 0.1963 \\
+\hline
+\end{tabular}
+\\[2pt]
+\footnotesize{$^{*}$Small, class-imbalanced 185-window test slice; see Section~\ref{sec:expa}.}
+\end{table}
+
+Model1/Model2 come from Experiment A's small, imbalanced test slice, while Model3/Model4 come from
+the much larger full-sequence evaluation --- they are \emph{not} on a like-for-like scale and
+should not be read as a single clean progression until Experiment A's split issue is resolved. At
+face value the flow-only MLP appears to dominate, but this reflects its far larger test set
+(184{,}626 flows vs.\ 185 windows) more than a genuine graph-vs-no-graph comparison; Experiment B
+(Table~\ref{tab:expb}), evaluated at matched full-sequence scale, is the fairer comparison and
+shows GAT+LSTM outperforming the flow-level Random Forest baseline (F1 0.195 vs.\ 0.122).
+
+\subsection{Explainability}
+\label{sec:explain}
+
+Three attention figures were generated for correctly-flagged (true-positive) anomaly windows, using
+the last GAT layer's attention weights, cross-checked against each window's ground-truth attack
+label.
+
+\begin{figure*}[!t]
+\centering
+\begin{subfigure}[b]{0.32\textwidth}
+\includegraphics[width=\textwidth]{fig_attention_0_w3853.png}
+\caption{Window 3853 (Friday PM, port scan)}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.32\textwidth}
+\includegraphics[width=\textwidth]{fig_attention_1_w4326.png}
+\caption{Window 4326 (Friday PM, DDoS)}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.32\textwidth}
+\includegraphics[width=\textwidth]{fig_attention_2_w4341.png}
+\caption{Window 4341 (Friday PM, DDoS)}
+\end{subfigure}
+\caption{Top-10 last-layer GAT attention edges for three true-positive anomaly windows. Node
+labels show destination port and truncated attack label.}
+\label{fig:attention}
+\end{figure*}
+
+The three windows illustrate two distinct attention patterns, reported honestly rather than
+presenting only the more flattering one. In window 4326 (Figure~\ref{fig:attention}b), the
+attention graph is genuinely informative: a chain of four distinct benign-labeled flows connected
+by high-weight edges, alongside a separate small self-attention cluster on a DDoS-labeled, port-80
+node --- spread across multiple neighboring flows in a way an analyst could use to trace what
+contributed to the anomaly score. In windows 3853 and 4341 (Figure~\ref{fig:attention}a, c), by
+contrast, attention is almost entirely \emph{self}-concentrated: the top-10 edges are dominated by
+one or two nodes attending overwhelmingly to themselves. This \emph{attention collapse} means that,
+for two of three sampled windows, last-layer GAT attention is a considerably weaker explainability
+signal than it first appears --- an honest limitation of the attention-only approach
+(Section~\ref{sec:limitations}), not a result to gloss over.
+
+\subsection{Cross-dataset evaluation: NSL-KDD, UNSW-NB15 and TON-IoT}
+\label{sec:multi}
+
+The CIC-IDS2017 experiments above rest on a single dataset with a handful of day-level drift
+events. To test whether the findings generalize, the same ideas --- flow-similarity window graphs,
+a GAT encoder, an LSTM over trailing windows, and ADWIN-triggered adaptation --- were re-run on
+three further public corpora: NSL-KDD \cite{tavallaee2009nslkdd}, UNSW-NB15
+\cite{moustafa2015unsw} and the network portion of TON\_IoT \cite{alsaedi2020toniot}, against the
+same family of flow-level and graph-level baselines. This is a self-contained second protocol, not
+a re-use of the CIC-IDS2017 numbers; its scores are \emph{not} comparable with
+Tables~\ref{tab:expa}--\ref{tab:expd-cost}.
+
+\subsubsection{Datasets and drift phases.} None of the three corpora carries a usable timestamp,
+and the TON\_IoT file is a concatenation of per-attack-type blocks, so each is cast as an ordered
+list of \emph{phases}: phase~0 is the training distribution and later phases form a chronological
+test stream (Table~\ref{tab:multi-data}). Rows are shuffled within a phase with a fixed seed and cut
+into windows of 256 flows that never span a phase boundary; preprocessing (signed-$\log$ of
+heavy-tailed columns, standardization, one-hot encoding of categoricals) is fit on phase~0 only.
+The nature of the drift differs by dataset and matters for interpretation: NSL-KDD's is
+\emph{native} (KDDTest+ contains 17 attack types absent from KDDTrain+), UNSW-NB15's is
+\emph{native but mild} (the official train/test sets are partitions of the same capture), and
+TON\_IoT's is \emph{constructed} (an ``emerging attack family'' scenario: injection/XSS appear in
+phase~2 and ransomware/MITM in phase~3), not a real capture timeline.
+
+\begin{table*}[!t]
+\centering
+\caption{Cross-dataset protocol. Windows have 256 flows; attack rate is the fraction of attack
+flows. ``Native'' drift comes from the official partition; ``constructed'' drift is the
+attack-family scenario described in the text.}
+\label{tab:multi-data}
+\small
+\begin{tabular}{|l|l|r|r|l|}
+\hline
+Dataset & Phase & Flows & Attack rate & Content \\
+\hline
+NSL-KDD   & 0 train  & 125{,}952 & 46.5\% & KDDTrain+ (23 labels) \\
+          & 1 stream &  22{,}528 & 56.9\% & KDDTest+ (+17 unseen attack types) \\
+\hline
+UNSW-NB15 & 0 train  & 175{,}104 & 68.1\% & official training set \\
+          & 1 stream &  82{,}176 & 55.1\% & official testing set \\
+\hline
+TON\_IoT  & 0 train  &  94{,}976 & 73.7\% & normal + backdoor, DDoS, DoS, scanning, password \\
+          & 1 stream &  39{,}936 & 75.0\% & same families, held-out flows \\
+          & 2 stream &  47{,}360 & 84.2\% & + injection, XSS (new) \\
+          & 3 stream &  28{,}416 & 73.7\% & + ransomware, MITM (new) \\
+\hline
+\end{tabular}
+\end{table*}
+
+\subsubsection{Formulation and protocol.} Because these datasets are 47--76\% attacks, the
+CIC-IDS2017 ``any attack in the window'' label would be constant, so every model here scores
+\emph{each flow}: nodes are flows, edges are the same symmetrized $k=8$ nearest-neighbour graph
+within a window, and the GAT+LSTM concatenates each node's GAT embedding with an LSTM state
+computed over the mean-pooled embeddings of the trailing $K=6$ windows (including the target)
+before a node-level classification head. Four graph-window variants are compared --- an MLP on
+single flows (no graph, no time), a static GCN, a static GAT, and the GAT+LSTM --- alongside
+flow-level Random Forest, XGBoost, a scikit-learn MLP, and a benign-only autoencoder (threshold at
+the 95th percentile of training-benign reconstruction error). Phase~0 windows are split 80/10/10
+into train, validation (early stopping), and a \emph{stationary hold-out}; every model is then scored
+over the full stream with no update, and the GAT+LSTM is additionally run under drift-triggered
+\emph{incremental} (LSTM and head, 3 epochs, last 50 windows) and \emph{full-retrain} (from scratch
+on all windows seen, 10 epochs) adaptation. As in Experiment D, adaptation uses the labels of windows
+\emph{already scored}, and each window is always scored before the model is adapted on it. All
+numbers are means over 3 seeds; metrics are pooled over flows at a 0.5 threshold (the autoencoder
+uses its own threshold for F1/FPR). Flow-level baselines receive \emph{no} adaptation, so the
+adaptive rows are not a like-for-like comparison with them (Section~\ref{sec:limitations}).
+
+Two details of the drift detector differ from Experiment D and are disclosed because they were set
+after inspecting the NSL-KDD stream's label-free statistics (not its labels or accuracy). First, two
+ADWIN instances monitor the window embedding norm and the mean predictive entropy of the window; the
+model adapts when either fires, subject to a 10-window cooldown. Second, because ADWIN's Hoeffding
+bound presumes values on the order of $[0,1]$ while both statistics vary by only $10^{-2}$--$10^{-1}$
+(so ADWIN with raw values never fired on NSL-KDD at $\delta\in\{0.002, 0.01, 0.05\}$), each statistic
+is z-scored on the last 100 training windows and mapped into $[0,1]$; ADWIN is warm-started on those
+windows.
+
+\subsubsection{Results: stationary versus drifted performance.} Table~\ref{tab:multi-f1} gives F1
+on the stationary hold-out and over the whole stream; Table~\ref{tab:multi-aucfpr} gives ROC-AUC and
+FPR over the stream.
+
+\begin{table*}[!t]
+\centering
+\caption{F1 on the stationary phase-0 hold-out (``Stat.'') and over the full drifted stream
+(``Strm.''), mean of 3 seeds. The three GAT+LSTM rows share one trained model, so their Stat.\
+column is identical (adaptation only occurs in the stream). Best stream F1 per dataset in bold.}
+\label{tab:multi-f1}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{|l|l|r|r|r|r|r|r|r|}
+\hline
+ & & \multicolumn{2}{|c|}{NSL-KDD} & \multicolumn{2}{|c|}{UNSW-NB15} & \multicolumn{2}{|c|}{TON\_IoT} & Mean \\
+\hline
+Model & Adapt. & Stat. & Strm. & Stat. & Strm. & Stat. & Strm. & Strm. \\
+\hline
+Random Forest      & none & 0.999 & 0.757 & 0.956 & \textbf{0.917} & 0.999 & \textbf{0.971} & 0.882 \\
+XGBoost            & none & 0.999 & 0.788 & 0.964 & 0.893 & 0.999 & 0.922 & 0.868 \\
+MLP (sklearn)      & none & 0.998 & 0.809 & 0.955 & 0.871 & 0.997 & 0.952 & 0.877 \\
+MLP (torch, node)  & none & 0.998 & 0.788 & 0.956 & 0.869 & 0.997 & 0.945 & 0.867 \\
+Autoencoder        & none & 0.921 & \textbf{0.866} & 0.602 & 0.495 & 0.757 & 0.762 & 0.708 \\
+Static GCN         & none & 0.974 & 0.723 & 0.934 & 0.845 & 0.979 & 0.795 & 0.788 \\
+Static GAT         & none & 0.988 & 0.783 & 0.945 & 0.848 & 0.985 & 0.879 & 0.837 \\
+GAT+LSTM           & none & 0.988 & 0.786 & 0.946 & 0.848 & 0.984 & 0.850 & 0.828 \\
+GAT+LSTM           & incr.& 0.988 & 0.819 & 0.946 & 0.866 & 0.984 & 0.947 & 0.877 \\
+GAT+LSTM           & full & 0.988 & 0.841 & 0.946 & 0.861 & 0.984 & 0.951 & 0.884 \\
+\hline
+\end{tabular}
+\end{table*}
+
+\begin{table*}[!t]
+\centering
+\caption{ROC-AUC and false-positive rate over the full drifted stream, mean of 3 seeds (threshold
+0.5; autoencoder FPR at its own threshold).}
+\label{tab:multi-aucfpr}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{|l|l|r|r|r|r|r|r|}
+\hline
+ & & \multicolumn{2}{|c|}{NSL-KDD} & \multicolumn{2}{|c|}{UNSW-NB15} & \multicolumn{2}{|c|}{TON\_IoT} \\
+\hline
+Model & Adapt. & ROC & FPR & ROC & FPR & ROC & FPR \\
+\hline
+Random Forest      & none & 0.966 & 0.027 & 0.980 & 0.138 & 0.999 & 0.003 \\
+XGBoost            & none & 0.962 & 0.028 & 0.979 & 0.250 & 0.998 & 0.002 \\
+MLP (sklearn)      & none & 0.920 & 0.052 & 0.972 & 0.325 & 0.996 & 0.005 \\
+MLP (torch, node)  & none & 0.937 & 0.058 & 0.971 & 0.331 & 0.993 & 0.005 \\
+Autoencoder        & none & 0.963 & 0.047 & 0.834 & 0.065 & 0.943 & 0.049 \\
+Static GCN         & none & 0.834 & 0.075 & 0.931 & 0.353 & 0.846 & 0.055 \\
+Static GAT         & none & 0.920 & 0.077 & 0.947 & 0.400 & 0.934 & 0.061 \\
+GAT+LSTM           & none & 0.925 & 0.080 & 0.947 & 0.400 & 0.937 & 0.069 \\
+GAT+LSTM           & incr.& 0.889 & 0.121 & 0.947 & 0.184 & 0.967 & 0.113 \\
+GAT+LSTM           & full & 0.928 & 0.090 & 0.943 & 0.159 & 0.983 & 0.048 \\
+\hline
+\end{tabular}
+\end{table*}
+
+Four observations follow. \textbf{(i) The stationary hold-out hides the problem.} Every supervised
+model scores F1 0.93--0.999 on the stationary hold-out (UNSW-NB15 is the hardest, 0.93--0.96), yet
+loses substantially once the stream begins --- Random Forest falls from 0.999 to 0.757 on NSL-KDD
+and the unadapted GAT+LSTM from 0.988 to 0.786, a drop of 0.20--0.24 --- while the autoencoder, weak
+in-distribution (0.60--0.92), degrades least on NSL-KDD (0.921 to 0.866) and is the best model
+there. This reproduces on three independent corpora the qualitative point of Experiments A--B: a
+random-partition score overstates deployed performance.
+\textbf{(ii) Without adaptation, graph structure and temporal context do not beat flow-level
+models.} The unadapted GAT+LSTM (mean stream F1 0.828) trails Random Forest (0.882), the
+scikit-learn MLP (0.877) and XGBoost (0.868), and is within 0.01 of the static GAT
+(0.837; per-dataset gaps are 0.003, 0.000 and $-$0.029, the last favouring the \emph{static} GAT)
+but below the graph-free torch MLP (0.867). On these datasets, then, the LSTM contributes nothing
+measurable on its own and the kNN-graph encoder alone does not help over a flow-level MLP; this
+does \emph{not} reproduce the Experiment~B ordering in which the temporal model led. A plausible
+reason is that windows are shuffled within a phase, so the only temporal signal available is
+phase-level context, but we did not test this.
+\textbf{(iii) Adaptation is where the graph-temporal model recovers.} Drift-triggered full
+retraining raises the GAT+LSTM's stream F1 by 0.055 on NSL-KDD, 0.013 on UNSW-NB15 and 0.101 on
+TON\_IoT, lifting its three-dataset mean from 0.828 to 0.884 --- level with the best static model
+(Random Forest, 0.882) and ahead of it on NSL-KDD (0.841 vs.\ 0.757) but behind it on
+UNSW-NB15 (0.861 vs.\ 0.917) and TON\_IoT (0.951 vs.\ 0.971). Unlike in CIC-IDS2017,
+\emph{incremental} adaptation also helps: it captures most of the full-retrain gain
+(+0.033, +0.018, +0.097) and has the same mean as the scikit-learn MLP (0.877). Because the
+flow-level baselines were never retrained, this is evidence that adaptation matters, not that the
+graph-temporal model is the better architecture; a drift-triggered Random Forest or XGBoost would
+be the fair comparator and was not run. \textbf{(iv) Adaptation reshapes the error profile.} On
+UNSW-NB15 the unadapted graph models over-flag benign traffic on the stream (FPR 0.40, against
+0.138 for Random Forest); adaptation cuts this to 0.16--0.18, which accounts for most of that
+dataset's small F1 gain, while on NSL-KDD and TON\_IoT incremental adaptation buys recall at the
+price of a higher FPR (0.121 and 0.113 vs.\ 0.080 and 0.069 unadapted), visible as lower ROC-AUC on
+NSL-KDD (0.889 vs.\ 0.925).
+
+\subsubsection{Per-phase behaviour on TON\_IoT.} TON\_IoT is the only dataset with several stream
+phases, which separates the cases where drift is real from where it is not
+(Table~\ref{tab:multi-ton}, Figure~\ref{fig:multi-stream}c). On phase~1, which re-draws the
+training families, every supervised model matches its stationary score (F1 0.977--0.999) and
+\emph{no} adaptation event fires. When a new attack family appears the picture splits: Random Forest
+holds up (0.997 on injection/XSS, 0.866 on ransomware/MITM) while XGBoost falls to 0.581 in phase~3
+despite a 0.990 ROC-AUC --- its scores still rank flows well but the fixed 0.5 threshold is wrong
+for the new traffic, a drift failure that ROC-AUC alone would not reveal. The static GCN collapses
+in phase~3 (0.285, with a seed standard deviation of 0.244), and the unadapted GAT+LSTM falls to
+0.669 versus 0.758 for the static GAT. Both adaptive variants recover (0.885 incremental, 0.882
+full retrain), exceeding every unadapted flow-level model in phase~3, Random Forest (0.866)
+included, though they remain below Random Forest in phase~2 (0.951/0.961 vs.\ 0.997). Detection is delayed rather than immediate: events occur 31 and 38 windows after the
+phase-2 and phase-3 boundaries, and the unadapted curves in Figure~\ref{fig:multi-stream}c show
+the cost of that lag.
+
+\begin{table}[t]
+\centering
+\caption{TON\_IoT F1 per stream phase, mean of 3 seeds (phase~1: training families; phase~2:
++injection, XSS; phase~3: +ransomware, MITM).}
+\label{tab:multi-ton}
+\small
+\begin{tabular}{|l|l|r|r|r|}
+\hline
+Model & Adapt. & Phase 1 & Phase 2 & Phase 3 \\
+\hline
+Random Forest      & none & 0.999 & 0.997 & 0.866 \\
+XGBoost            & none & 0.999 & 0.991 & 0.581 \\
+MLP (sklearn)      & none & 0.998 & 0.985 & 0.802 \\
+Autoencoder        & none & 0.768 & 0.879 & 0.427 \\
+Static GCN         & none & 0.977 & 0.812 & 0.285 \\
+Static GAT         & none & 0.982 & 0.850 & 0.758 \\
+GAT+LSTM           & none & 0.982 & 0.820 & 0.669 \\
+GAT+LSTM           & incr.& 0.982 & 0.951 & 0.885 \\
+GAT+LSTM           & full & 0.982 & 0.961 & 0.882 \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{figure*}[!t]
+\centering
+\begin{subfigure}[b]{0.32\textwidth}
+\includegraphics[width=\textwidth]{fig_stream_nsl-kdd.png}
+\caption{NSL-KDD}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.32\textwidth}
+\includegraphics[width=\textwidth]{fig_stream_unsw-nb15.png}
+\caption{UNSW-NB15}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.32\textwidth}
+\includegraphics[width=\textwidth]{fig_stream_ton-iot.png}
+\caption{TON\_IoT}
+\end{subfigure}
+\caption{Rolling F1 (10 windows, pooled over 3 seeds) over the drifted stream for XGBoost, the
+static GAT, and the GAT+LSTM under no/incremental/full-retrain adaptation. Dotted lines are phase
+boundaries; triangles mark adaptation events for seed~0.}
+\label{fig:multi-stream}
+\end{figure*}
+
+\subsubsection{Adaptation cost.} Table~\ref{tab:multi-cost} reports the cost of the adaptation events
+that ADWIN triggered. Full retraining costs about 40--50$\times$ the wall-clock time of incremental
+fine-tuning (20--28\,s vs.\ 0.5--0.7\,s per event), a smaller ratio than the $157\times$ of
+CIC-IDS2017 because these training sets are far smaller (450--680 windows of 256 flows against
+$\approx$2{,}500 windows of 1{,}000). Peak GPU memory is essentially identical for the two strategies
+(322--339\,MB) because this figure is a process-wide peak dominated by the GPU-resident window store,
+so unlike Table~\ref{tab:expd-cost} it does not isolate the adaptation's own footprint and should
+not be read as ``no memory difference''. Event counts are low (about 1--2 per seed per strategy) and
+differ between strategies because adaptation changes later statistics. On NSL-KDD and UNSW-NB15 the
+first event fires at stream window 59 in every run, i.e.\ detection takes roughly 60 windows even
+though NSL-KDD's shift is present from the first window; the cost of that delay is not isolated here.
+
+\begin{table*}[!t]
+\centering
+\caption{Adaptation cost on the new datasets (mean over events and 3 seeds; ``events'' = events per
+seed). Peak memory is process-wide (see text).}
+\label{tab:multi-cost}
+\small
+\begin{tabular}{|l|r|r|r|r|r|r|}
+\hline
+ & \multicolumn{2}{|c|}{Events} & \multicolumn{2}{|c|}{Time/event (s)} & \multicolumn{2}{|c|}{Peak mem (MB)} \\
+\hline
+Dataset & Incr. & Full & Incr. & Full & Incr. & Full \\
+\hline
+NSL-KDD   & 1.0 & 1.0 & 0.51 & 20.2 & 321.9 & 331.1 \\
+UNSW-NB15 & 1.7 & 1.7 & 0.68 & 28.5 & 338.4 & 338.8 \\
+TON\_IoT  & 1.7 & 2.3 & 0.54 & 27.4 & 336.5 & 333.7 \\
+\hline
+\end{tabular}
+\end{table*}
+
+\subsubsection{Cross-dataset synthesis.} Three conclusions are consistent across the four corpora.
+First, in-distribution scores are saturated and uninformative: all supervised models reach
+F1 $\ge$ 0.93 on the stationary hold-out, so the ranking of methods is decided only by what happens
+under drift. Second, drift hurts in proportion to how novel the new traffic is --- largest for
+NSL-KDD's unseen attacks and TON\_IoT phase~3, and smallest for UNSW-NB15, whose train/test split is
+statistically similar (every supervised model's stream F1 is within 0.04--0.10 of its stationary
+F1, against drops of up to 0.24 on NSL-KDD). Third, the value of the graph-temporal design lies in how readily it can be
+\emph{updated}, not in its static accuracy: the unadapted GAT+LSTM never beats a tuned Random
+Forest, and its adapted version only matches it on average. Where the incremental strategy was a
+negative result on CIC-IDS2017, it is a useful cheap option here; the difference may reflect the
+dataset or our choices (a $10\times$ larger fine-tuning rate, a two-statistic detector, and
+node-level rather than window-level labels all changed at once), and we did not isolate which.
+
+% =============================================================================
+\section{Comparison to Other Work}
+\label{sec:discussion}
+% =============================================================================
+
+Table~\ref{tab:comparison} summarizes how this paper's protocol and headline result relate to the
+representative studies reviewed in Section~\ref{sec:related}.
+
+\begin{table*}[!t]
+\centering
+\caption{This work compared with representative prior CIC-IDS2017 / GNN-IDS studies.}
+\label{tab:comparison}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.25}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{2.9cm}|Y|Y|Y|Y|}
+\hline
+\textbf{Study} & \textbf{Representation} & \textbf{Split protocol} & \textbf{Drift-adaptive} & \textbf{Headline result} \\
+\hline\hline
+Vedash et~al.\ \cite{vedash2026xai} & Flow (tabular) & Random / stratified & No & F1 $\approx$0.98 (tree ensemble) \\
+\hline
+Akanksha \cite{akanksha2025malware} & Flow (tabular) & Random & No & Accuracy $\approx$0.97--0.99 \\
+\hline
+Ravi and Poornima \cite{ravi2025flowmetadata} & Flow metadata & Random & No & High accuracy across traffic types \\
+\hline
+R{\'i}os-Guiral et~al.\ \cite{riosguiral2024flowspackets} & Flow + packet & Random & No & Comparable flow/packet feature accuracy \\
+\hline
+Typical GNN-IDS (Sec.~\ref{sec:related}) & Host/flow graph, static snapshot & Random / stratified & No & High single-snapshot accuracy \\
+\hline
+Gupta et~al.\ (NetGuard) \cite{gupta2026netguard} & Flow (tabular) + generative augmentation & Cross-year (CIC 2017$\rightarrow$2018), July$\rightarrow$Aug (UGR'16) & Yes (active sampling, 1\% labels) & $\sim2\times$ avg.\ gain; 8--15$\times$ rare-attack F1 \\
+\hline
+Zhang et~al.\ (SSF) \cite{zhang2025ssf} & Flow (tabular) & Sequential update batches (NSL-KDD, UNSW-NB15) & Yes (selection + forgetting) & Acc.\ 90.50\% / 90.27\% \\
+\hline
+Suresh and Jose \cite{suresh2025ppo} & Flow (tabular) ensemble + PPO & Per-dataset (5 datasets) & Adaptive weighting, no drift handling & Avg.\ acc.\ 97.16\% \\
+\hline
+Ma et~al.\ (FedT-DQN) \cite{ma2025fedtdqn} & Flow (tabular), federated & Per-dataset (4 datasets) & No (privacy focus) & Acc.\ $>$99\% \\
+\hline
+Patel et~al.\ (FL-MalDrift) \cite{patel2026fmaldrift} & Android malware features, federated & Includes chronological AndroZoo split & Yes (client-side ADWIN etc.) & Acc.\ 92.4--96.8\% \\
+\hline
+Zhou and Lu (CGLM) \cite{zhou2025cglm} & Learned correlation graph over streams (non-IDS) & Small-data training, online test & Yes (subgraph / graph regeneration) & Beats baselines (forecasting) \\
+\hline
+\textbf{This work} & Flow-similarity graph sequence & \textbf{Strict time order, cross-day} & \textbf{Yes} (ADWIN + retrain/incremental) & F1 0.353 (adapted) vs.\ 0.195 (static) under drift \\
+\hline
+\end{tabularx}
+\end{table*}
+
+\subsubsection{Flow-level baselines match the published literature.} The near-perfect Random
+Forest/XGBoost/MLP numbers in Table~\ref{tab:expa} (F1 0.95--0.99, ROC-AUC $\approx$1.0) are
+consistent with the broad body of published CIC-IDS2017 results
+\cite{sharafaldin2018cicids2017,vedash2026xai,akanksha2025malware,ravi2025flowmetadata}. This
+paper reproduces that result under a \emph{chronological} rather than random split, and the numbers
+hold up almost unchanged --- a useful negative control: with this much redundant per-flow signal,
+switching to a time-based split barely matters at the flow level. This paper additionally asks what
+happens to that same signal once evaluation moves to window/graph level across genuine day-to-day
+drift (Experiments B--D) --- exactly where the near-perfect picture stops holding.
+
+\subsubsection{Where this evaluation departs from prior work.} Most published GNN-IDS work reports a
+single number on a static, randomly- or stratified-split graph dataset and does not evaluate across
+a period long enough to contain a genuine, unseen distribution shift. Experiments B/C are, to our
+knowledge, a comparatively rare instance of scoring a graph-temporal IDS model across an entire
+multi-day corpus with no retraining in between, and the static-versus-temporal distinction matters
+here (Table~\ref{tab:expb}): the temporal model's F1 advantage over a static GCN (0.195 vs.\ 0.120)
+only appears at full-sequence scale and would be invisible under single-snapshot evaluation.
+Concept-drift detectors are well studied on generic streaming benchmarks
+\cite{bifet2007adwin,gama2014survey}, but published network-IDS papers rarely report the
+\emph{wall-clock and memory cost} of adaptation alongside its accuracy gain; Experiment D's joint
+accuracy/cost tables (Tables~\ref{tab:expd-acc}--\ref{tab:expd-cost}) fill that gap, and the finding
+that cheap incremental fine-tuning does not recover full retraining's gain is a useful counterpoint
+to the assumption that partial updates are ``nearly as good, for a fraction of the cost.''
+
+\subsubsection{Against drift-adaptive IDS and continual-learning work.} NetGuard
+\cite{gupta2026netguard} is the closest IDS comparator: it also uses CIC-IDS2017 and also finds that
+a static model degrades under drift (it shows the same attack classes occupying different regions of
+feature space between CIC-IDS 2017 and 2018). The two works are complementary rather than competing.
+NetGuard reduces \emph{labeling} cost and strengthens rare-class (web attack, botnet) coverage on
+flow features; this paper holds labels fixed and measures \emph{compute} cost of adaptation on a
+graph-temporal model. The finding here that Thursday's web-attack and infiltration phases collapse to
+F1~$\approx$~0 for a never-updated model is consistent with NetGuard's emphasis on rare, emerging
+attack classes, and suggests that label-efficient sample selection could be paired with the
+retraining trigger studied here. SSF \cite{zhang2025ssf} tackles a similar question from the
+memory side (which samples to retain or forget); the full-retrain strategy here retains \emph{all}
+history, and SSF's forgetting mechanism is a natural candidate for reducing the 34.6\,min per-event
+retrain cost. We did not run either method, so no numerical superiority is claimed; reported
+accuracies in Table~\ref{tab:comparison} are on different datasets, tasks, and protocols and are not
+directly comparable to our F1.
+
+\subsubsection{Against the incremental-versus-full-update literature.} The strategy split in
+Experiment D mirrors choices made in DHDA \cite{xiang2026dhda} (ADWIN-triggered local drift
+detection with incremental updates and periodic full retraining), CGLM \cite{zhou2025cglm}
+(lightweight subgraph adjustment without drift, graph regeneration with drift), and ADA-ADF
+\cite{li2025adaadf} (drift-type-specific replay). Those works report that a hybrid of cheap and
+expensive updates pays off; our result qualifies this for a graph-temporal IDS. When the cheap path
+only fine-tunes the LSTM and head (GAT frozen), it gave no measurable gain (F1 0.196 vs.\ 0.195), so
+the benefit of a hybrid scheme appears to depend on \emph{what} the cheap path updates and on how
+the drift signal is chosen, not merely on having one. DHDA's design points to a refinement we have
+not tried: retraining only the affected region/sub-model rather than the whole network. Unlike
+these studies, we also report absolute wall-clock and GPU-memory cost per event (Table~\ref{tab:expd-cost}).
+Finally, ADWIN over a scalar summary of the model's own representation ($\|Z_t\|_2$) is
+a lighter detector than the hybrid statistical/performance detector of ADA-ADF, and FL-MalDrift
+\cite{patel2026fmaldrift} notes ADWIN's low false-alarm behavior, but we did not compare
+detectors, which we leave to future work.
+
+\subsubsection{Against federated, RL, and ensemble IDS.} FedT-DQN \cite{ma2025fedtdqn}, the PPO
+ensemble of Suresh and Jose \cite{suresh2025ppo}, and the FL systems surveyed by Belenguer
+et~al.\ \cite{belenguer2025flreview} report accuracies in the 97--99\% range, in line with the
+flow-level baselines of Table~\ref{tab:expa}. Such numbers come from per-dataset evaluations where
+train and test share a distribution, which is exactly the regime where our own flow-level models
+score F1 0.95--0.99 yet our window-level models do not transfer across days. We therefore read the
+high accuracies as evidence of the stationary-evaluation effect this paper highlights, not as
+contradicting its findings. Privacy-preserving training (FL) and adaptive ensembling (RL) are
+orthogonal to our contribution, and a federated deployment of the graph-temporal model would face
+the client-side drift handling that FL-MalDrift addresses.
+
+\subsubsection{Honest positioning.} This paper does not claim to outperform the flow-level literature's
+headline numbers (Table~\ref{tab:expa}'s flow-level baselines beat every window-level model at that
+scale), nor a novel architecture (GAT, LSTM, and ADWIN are all prior work). Its contribution is
+narrower: showing concretely, on one real dataset, where a temporal graph model's advantage over
+static baselines does and does not appear depending on the evaluation protocol, and quantifying
+what recovering that advantage under drift actually costs.
+
+% =============================================================================
+\section{Limitations}
+\label{sec:limitations}
+% =============================================================================
+
+\begin{itemize}[nosep]
+\item This study has several limitations. The evaluation uses only CIC-IDS2017, whose available copy lacks host identifiers and timestamps; consequently, flow-similarity graphs are used and row order is treated as a proxy for chronology. The observed drift consists of a small number of day-level transitions, and the stationary window-level experiment is affected by a split-induced class-distribution shift that requires further validation. In addition, the graph and temporal hyperparameters were not exhaustively tuned, and the attention-based explanations were evaluated on only a small number of anomaly windows. The cross-dataset study (Section~\ref{sec:multi}) adds further caveats: NSL-KDD, UNSW-NB15 and TON\_IoT have no usable timestamps, so rows are shuffled within a phase and the LSTM can exploit only phase-level context; TON\_IoT's drift is a constructed attack-family scenario, and UNSW-NB15's is mild; the flow-level baselines were never adapted, so the adaptive GAT+LSTM is not compared against an equally adaptive Random Forest or XGBoost; the drift detector's statistics and scaling were chosen after inspecting NSL-KDD's label-free statistics, detection lagged the true shift by 30--60 windows, and the stream protocol changed several things relative to Experiment D at once (node-level labels, a two-statistic detector, a larger incremental learning rate), so the reversal of the incremental-adaptation result is not attributed to a single cause; and results are from 3 seeds on a single data split.
+\end{itemize}
+
+% =============================================================================
+\section{Conclusion and Future Scope}
+\label{sec:conclusion}
+% =============================================================================
+
+This study evaluated network anomaly detection under temporal distribution shift using a flow-similarity graph representation, GAT--LSTM temporal modeling, and ADWIN-based adaptation on CIC-IDS2017. Under the full time-ordered Monday--Friday evaluation, the GAT--LSTM model achieved an F1 of 0.195 without adaptation, while ADWIN-triggered full retraining increased F1 to 0.353. In contrast, the incremental strategy used in this study changed F1 only marginally to 0.196. The results therefore show that temporal evaluation can reveal behavior that is not visible under conventional stationary evaluation and that adaptation effectiveness depends strongly on the update strategy and its computational cost. The stationary window-level experiment remains inconclusive because of the class-distribution shift introduced by its chronological split.
+
+A cross-dataset replication on NSL-KDD, UNSW-NB15 and TON\_IoT (Section~\ref{sec:multi}) supports the central methodological point and qualifies the rest. Stationary scores are saturated (F1 $\ge$ 0.93) and misleading, with drops of up to 0.24 F1 under drift; the unadapted GAT+LSTM does not outperform flow-level baselines (mean stream F1 0.828 vs.\ 0.882 for Random Forest) and the LSTM adds nothing measurable over a static GAT; drift-triggered adaptation is what closes the gap (0.884 with full retraining, 0.877 incrementally at roughly $1/40$--$1/50$ of the wall-clock cost), but only to parity with an unadapted Random Forest, so the evidence favours adaptation, not the graph-temporal architecture itself. In contrast to CIC-IDS2017, incremental adaptation helped on all three datasets.
+
+Future work will focus on three directions. First, evaluation should be extended to additional intrusion-detection datasets, including CSE-CIC-IDS2018, and the flow-level baselines should be given the same drift-triggered retraining so that the adaptive comparison is like-for-like. Second, datasets retaining host and flow identifiers should be used to construct host-communication graphs and capture lateral-movement information. Third, the stationary evaluation should be redesigned with a more representative temporal split, while additional adaptation strategies and hyperparameter settings should be investigated to improve the accuracy--cost trade-off.
+
+ 
+
+\begin{credits}
+\subsubsection{Disclosure of Interests.}
+The authors have no competing interests to declare that are relevant to the content of this
+article.
+\end{credits}
+
+% =============================================================================
+\begin{thebibliography}{30}
+
+\bibitem{sommer2010closedworld}
+Sommer, R., Paxson, V.: Outside the closed world: On using machine learning for network intrusion
+detection. In: Proceedings of the IEEE Symposium on Security and Privacy (2010)
+
+\bibitem{sharafaldin2018cicids2017}
+Sharafaldin, I., Lashkari, A.H., Ghorbani, A.A.: Toward generating a new intrusion detection
+dataset and intrusion traffic characterization. In: Proceedings of the 4th International
+Conference on Information Systems Security and Privacy (ICISSP) (2018)
+
+\bibitem{chen2016xgboost}
+Chen, T., Guestrin, C.: XGBoost: A scalable tree boosting system. In: Proceedings of the 22nd ACM
+SIGKDD International Conference on Knowledge Discovery and Data Mining (2016)
+
+\bibitem{vedash2026xai}
+Vedash, G.K.P., Divya, P., Karthick Sriram, M., Mallika, S.: Benchmarking explainable AI
+architectures for network intrusion detection on CICIDS2017. In: Proceedings of the IEEE
+International Conference (IEEE Xplore Document 11451878) (2026)
+
+\bibitem{akanksha2025malware}
+Akanksha, E.: Analysis of machine learning models for malware detection in network traffic data.
+In: Proceedings of the IEEE International Conference (IEEE Xplore Document 11337712) (2025)
+
+\bibitem{ravi2025flowmetadata}
+Ravi, V., Poornima, A.S.: Flow-based metadata with robust machine learning approaches for
+application classification in diverse network traffic. In: Proceedings of the IEEE International
+Conference (IEEE Xplore Document 11277451) (2025)
+
+\bibitem{riosguiral2024flowspackets}
+R{\'i}os-Guiral, S., Lopez, C., Vergara, J., Botero, J.F., Guti\'{e}rrez, S.A.: Network traffic
+analysis through flows and packets with machine learning. In: Proceedings of the IEEE
+International Conference (IEEE Xplore Document 10755577) (2024)
+
+\bibitem{viksha2024sampling}
+Viksha, A., Singh, A.V.: Analysis of traffic sampling on machine learning based network intrusion
+detection. In: Proceedings of the IEEE International Conference (IEEE Xplore Document 10391803)
+(2024)
+
+\bibitem{aouedi2021unsupervised}
+Aouedi, O., Piamrat, K., Hamma, S., Perera, J.K.M.: Network traffic analysis using machine
+learning: an unsupervised approach to understand and slice your network. HAL preprint
+hal-03344361 (2021)
+
+\bibitem{su2018hierarchical}
+Su, L., Yao, Y., Li, N., Liu, J., Lu, Z., Liu, B.: Hierarchical clustering based network traffic
+data reduction for improving suspicious flow detection. In: Proceedings of the IEEE International
+Conference (IEEE Xplore Document 8455976) (2018)
+
+\bibitem{szostak2020lda}
+Szostak, D., Walkowiak, K., W{\l}odarczyk, A.: Short-term traffic forecasting in optical network
+using linear discriminant analysis machine learning classifier. In: Proceedings of the IEEE
+International Conference (IEEE Xplore Document 9203040) (2020)
+
+\bibitem{aresrobledo2026gnnsurvey}
+Ares-Robledo, F., Rif{\`a}-Pous, H., Claris{\'o}, R.: Graph neural networks for anomaly detection: a
+systematic review of dynamic temporal approaches. Artificial Intelligence Review \textbf{59}, 129
+(2026). \url{https://doi.org/10.1007/s10462-026-11532-7}
+
+\bibitem{gupta2026netguard}
+Gupta, R., Liu, S., Zhang, X., Zhang, R., Benkraouda, H., Hu, X., Cao, P., Feamster, N.,
+Nahrstedt, K.: Generative active adaptation for drifting and imbalanced network intrusion
+detection. Proceedings of the ACM on Networking \textbf{4}(CoNEXT3), Article 34 (2026).
+\url{https://doi.org/10.1145/3830389}
+
+\bibitem{zhang2025ssf}
+Zhang, X., Zhao, R., Jiang, Z., Chen, H., Ding, Y., Ngai, E.C.H., Yang, S.-H.: Continual learning
+with strategic selection and forgetting for network intrusion detection. In: IEEE INFOCOM 2025.
+\url{https://doi.org/10.1109/INFOCOM55648.2025.11044615}
+
+\bibitem{li2025adaadf}
+Li, D., Nair, N.-K.C., Wang, K.I.-K.: An unsupervised framework for drift-aware anomaly detection
+in streaming time series. Applied Soft Computing \textbf{185}, 113903 (2025).
+\url{https://doi.org/10.1016/j.asoc.2025.113903}
+
+\bibitem{xiang2026dhda}
+Xiang, Z., Gong, J., Chen, T.: Dually hierarchical drift adaptation for online configuration
+performance learning. In: 2026 IEEE/ACM 48th International Conference on Software Engineering
+(ICSE '26). \url{https://doi.org/10.1145/3744916.3764542}
+
+\bibitem{zhou2025cglm}
+Zhou, M., Lu, J.: Continuous graph learning-based self-adaptation for multistream concept drift.
+IEEE Transactions on Cybernetics \textbf{55}(8), 3760 (2025)
+
+\bibitem{suresh2025ppo}
+Suresh, A., Cyril Jose, A.: Adaptive network intrusion detection using reinforcement learning with
+proximal policy optimization. ACM Transactions on Privacy and Security \textbf{28}(4), Article 48
+(2025). \url{https://doi.org/10.1145/3764586}
+
+\bibitem{belenguer2025flreview}
+Belenguer, A., Pascual, J.A., Navaridas, J.: A review of federated learning applications in
+intrusion detection systems. Computer Networks \textbf{258}, 111023 (2025).
+\url{https://doi.org/10.1016/j.comnet.2024.111023}
+
+\bibitem{ma2025fedtdqn}
+Ma, T., Yin, Y., Yang, W., Wang, S.: A federated transformer-enhanced double Q-network for
+collaborative intrusion detection. Scientific Reports.
+\url{https://doi.org/10.1038/s41598-025-31664-0}
+
+\bibitem{patel2026fmaldrift}
+Patel, A., Tomar, D.S., Pateriya, R.K., Haripriya, R.: FL-MalDrift: a federated learning framework
+for malware detection under local concept drift. Scientific Reports \textbf{16}, 1821 (2026).
+\url{https://doi.org/10.1038/s41598-025-31592-z}
+
+\bibitem{tavallaee2009nslkdd}
+Tavallaee, M., Bagheri, E., Lu, W., Ghorbani, A.A.: A detailed analysis of the KDD CUP 99 data
+set. In: IEEE Symposium on Computational Intelligence for Security and Defense Applications
+(CISDA) (2009)
+
+\bibitem{moustafa2015unsw}
+Moustafa, N., Slay, J.: UNSW-NB15: a comprehensive data set for network intrusion detection
+systems (UNSW-NB15 network data set). In: Military Communications and Information Systems
+Conference (MilCIS) (2015)
+
+\bibitem{alsaedi2020toniot}
+Alsaedi, A., Moustafa, N., Tari, Z., Mahmood, A., Anwar, A.: TON\_IoT telemetry dataset: a new
+generation dataset of IoT and IIoT for data-driven intrusion detection systems. IEEE Access
+\textbf{8}, 165130--165150 (2020)
+
+\bibitem{kipf2017gcn}
+Kipf, T.N., Welling, M.: Semi-supervised classification with graph convolutional networks. In:
+International Conference on Learning Representations (ICLR) (2017)
+
+\bibitem{velickovic2018gat}
+Veli\v{c}kovi\'{c}, P., Cucurull, G., Casanova, A., Romero, A., Li\`{o}, P., Bengio, Y.: Graph
+attention networks. In: International Conference on Learning Representations (ICLR) (2018)
+
+\bibitem{zhou2020gnnreview}
+Zhou, J., Cui, G., Hu, S., Zhang, Z., Yang, C., Liu, Z., Wang, L., Li, C., Sun, M.: Graph neural
+networks: A review of methods and applications. AI Open \textbf{1}, 57--81 (2020)
+
+\bibitem{rossi2020tgn}
+Rossi, E., Chamberlain, B., Frasca, F., Eynard, D., Monti, F., Bronstein, M.: Temporal graph
+networks for deep learning on dynamic graphs. arXiv preprint arXiv:2006.10637 (2020)
+
+\bibitem{pareja2020evolvegcn}
+Pareja, A., Domeniconi, G., Chen, J., Ma, T., Suzumura, T., Kanezashi, H., Kaler, T., Schardl, T.,
+Leiserson, C.: EvolveGCN: Evolving graph convolutional networks for dynamic graphs. In:
+Proceedings of the AAAI Conference on Artificial Intelligence (2020)
+
+\bibitem{hochreiter1997lstm}
+Hochreiter, S., Schmidhuber, J.: Long short-term memory. Neural Computation \textbf{9}(8),
+1735--1780 (1997)
+
+\bibitem{bifet2007adwin}
+Bifet, A., Gavald\`a, R.: Learning from time-changing data with adaptive windowing. In:
+Proceedings of the 2007 SIAM International Conference on Data Mining (2007)
+
+\bibitem{gama2014survey}
+Gama, J., \v{Z}liobait\.{e}, I., Bifet, A., Pechenizkiy, M., Bouchachia, A.: A survey on concept
+drift adaptation. ACM Computing Surveys \textbf{46}(4) (2014)
+
+\bibitem{montiel2021river}
+Montiel, J., Halford, M., Mastelini, S.M., Bolmier, G., Sourty, R., Vaysse, R., Zouitine, A.,
+Gomes, H.M., Read, J., Abdessalem, T., Bifet, A.: River: machine learning for streaming data in
+Python. Journal of Machine Learning Research \textbf{22}(110) (2021)
+
+\end{thebibliography}
+
+\end{document}

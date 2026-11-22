@@ -1,0 +1,7 @@
+2026-11-22 13:56:51,331 INFO Resumed from checkpoints\gat_lstm.pt at epoch 19
+2026-11-22 13:58:57,810 INFO Wrote results\fig_attention_0_w3853.png
+2026-11-22 13:58:57,810 INFO window 3853 (fri_pm_scan): score=0.999 majority_label=BENIGN
+2026-11-22 13:58:58,248 INFO Wrote results\fig_attention_1_w4326.png
+2026-11-22 13:58:58,248 INFO window 4326 (fri_pm_ddos): score=0.999 majority_label=BENIGN
+2026-11-22 13:58:58,670 INFO Wrote results\fig_attention_2_w4341.png
+2026-11-22 13:58:58,670 INFO window 4341 (fri_pm_ddos): score=0.999 majority_label=DDoS
